@@ -1,5 +1,7 @@
+ARG DOCKER_HUB_USER_NAME
+
 # Use pylon
-FROM zhuoqiw/ros-pylon:7.3.0 AS pylon
+FROM $DOCKER_HUB_USER_NAME/ros-pylon:7.3.0 AS pylon
 
 # Base image
 FROM ros:humble

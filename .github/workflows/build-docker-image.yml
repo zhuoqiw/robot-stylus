@@ -28,6 +28,7 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v4
         with:
+          build-args: DOCKER_HUB_USER_NAME=${{ secrets.DOCKER_HUB_USER_NAME }}
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
