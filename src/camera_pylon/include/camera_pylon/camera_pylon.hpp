@@ -23,17 +23,37 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/trigger.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
+#include "sensor_msgs/msg/image.hpp"
 
 namespace camera_pylon
 {
+
+using std_srvs::srv::Trigger;
+using sensor_msgs::msg::Image;
 
 class CameraPylon : public rclcpp::Node
 {
   friend class CImageEventPrinter;
 
 public:
+  /**
+   * @brief Construct a new Camera Pylon object.
+   *
+   * Initialize publisher.
+   * Create an inner implementation.
+   * Print success if all done.
+   * @param options Encapsulation of options for node initialization.
+   */
   explicit CameraPylon(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
+
+  /**
+   * @brief Destroy the Camera Pylon object.
+   *
+   * Release inner implementation.
+   * Release publisher.
+   * Print success if all done.
+   * Throw no exception.
+   */
   virtual ~CameraPylon();
 
   /**
@@ -83,36 +103,34 @@ private:
    *
    * @param f A future to point cloud msg.
    */
-  void _push_back_future(std::future<sensor_msgs::msg::PointCloud2::UniquePtr> fut);
+  void _push_back_future(std::future<Image::UniquePtr> fut);
 
 private:
   Pylon::CInstantCamera cam;
-  // class _Impl;
-  // std::unique_ptr<_Impl> _impl;
 
-  // const char * _pubName = "~/pub";  // TODO(imp)
-  // rclcpp::Publisher<std_msgs::msg::String>::SharedPtr _pub;
+  /**
+   * @brief Service name.
+   *
+   */
+  const char * _srv_trigger_name = "~/trigger";  // TODO(imp)
 
-  // const char * _subName = "~/sub";  // TODO(imp)
-  // rclcpp::Subscription<std_msgs::msg::String>::SharedPtr _sub;
-
-  const char * _srv_start_name = "~/start";  // TODO(imp)
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr _srv_start;
-
-  const char * _srv_stop_name = "~/stop";  // TODO(imp)
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr _srv_stop;
+  /**
+   * @brief Shared pointer to service.
+   *
+   */
+  rclcpp::Service<Trigger>::SharedPtr _srv_trigger;
 
   /**
    * @brief Publisher name.
    *
    */
-  const char * _pub_name = "~/line";
+  const char * _pub_name = "~/image";
 
   /**
    * @brief Shared pointer to publisher.
    *
    */
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr _pub;
+  rclcpp::Publisher<Image>::SharedPtr _pub;
 
   /**
    * @brief Number of co-workers.
@@ -154,19 +172,13 @@ private:
    * @brief Double end queue for results.
    *
    */
-  std::deque<std::future<sensor_msgs::msg::PointCloud2::UniquePtr>> _futures;
+  std::deque<std::future<Image::UniquePtr>> _futures;
 
   /**
    * @brief Threads for workers and the manager.
    *
    */
   std::vector<std::thread> _threads;
-
-  /**
-   * @brief ROS parameter callback handle.
-   *
-   */
-  // OnSetParametersCallbackHandle::SharedPtr _handle;
 };
 
 }  // namespace camera_pylon
