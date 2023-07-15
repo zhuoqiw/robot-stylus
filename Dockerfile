@@ -1,3 +1,4 @@
+# Docker hub user name
 ARG DOCKER_HUB_USER_NAME
 
 # Use pylon
@@ -34,10 +35,14 @@ ENV PYLON_ROOT=/opt/pylon
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     gdb \
-    nano \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
+
+# Install opencv-python
+RUN python3 -m pip install opencv-python
 
 # Setup ldconfig
 RUN ldconfig
 
+# Login as ros
 USER ros
