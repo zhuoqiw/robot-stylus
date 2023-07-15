@@ -35,11 +35,8 @@ ENV PYLON_ROOT=/opt/pylon
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     gdb \
-    python3-pip \
+    python3-opencv \
     && rm -rf /var/lib/apt/lists/*
-
-# Install opencv-python
-RUN python3 -m pip install opencv-python
 
 # Setup ldconfig
 RUN ldconfig
