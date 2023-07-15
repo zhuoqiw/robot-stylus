@@ -1,7 +1,10 @@
 # Docker hub user name
 ARG DOCKER_HUB_USER_NAME
 
-# Use pylon
+# Use OpenCV
+FROM $DOCKER_HUB_USER_NAME/ros-opencv:4.8.0 AS opencv
+
+# Use Pylon
 FROM $DOCKER_HUB_USER_NAME/ros-pylon:7.3.0 AS pylon
 
 # Base image
@@ -25,7 +28,10 @@ RUN echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
 # Enable root user access ros
 RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc
 
-# Copy from pylon
+# Copy from OpenCV
+COPY --from=opencv /setup /
+
+# Copy from Pylon
 COPY --from=pylon /setup /
 
 # Setup environment
@@ -35,7 +41,6 @@ ENV PYLON_ROOT=/opt/pylon
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     gdb \
-    python3-opencv \
     && rm -rf /var/lib/apt/lists/*
 
 # Setup ldconfig
