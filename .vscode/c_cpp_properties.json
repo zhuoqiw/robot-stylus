@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "zhushi",
+            "name": "robot stylus",
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/ros/**",
