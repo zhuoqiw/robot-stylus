@@ -5,6 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/ros/**",
+                "/opt/opencv/include/opencv4",
                 "/opt/pylon/include"
             ],
             "defines": [],

@@ -26,7 +26,7 @@ RUN echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
 # Enable root user access ros
-RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc
+RUN echo "source /opt/ros/humble/setup.bash" >> /home/ros/.bashrc
 
 # Copy from OpenCV
 COPY --from=opencv /setup /
