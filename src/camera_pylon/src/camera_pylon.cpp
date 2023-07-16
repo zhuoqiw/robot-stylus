@@ -153,7 +153,6 @@ void CameraPylon::_worker()
       msg->data.resize(msg->height * msg->width);
       memcpy(msg->data.data(), ptr->GetBuffer(), msg->height * msg->width);
       prom.set_value(std::move(msg));
-      RCLCPP_INFO(this->get_logger(), "Image in worker");
     } else {
       _images_con.wait(lk);
     }
@@ -169,10 +168,7 @@ void CameraPylon::_manager()
       _futures.pop_front();
       lk.unlock();
       auto ptr = f.get();
-      RCLCPP_INFO(this->get_logger(), "Image: %s", ptr->header.frame_id.c_str());
       _pub->publish(std::move(ptr));
-      RCLCPP_INFO(this->get_logger(), "Image in manager");
-      // RCLCPP_INFO(this->get_logger(), "Image: %s", ptr->header.frame_id.c_str());
     } else {
       _futures_con.wait(lk);
     }

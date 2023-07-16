@@ -16,103 +16,109 @@
 
 #include <memory>
 
+#include "opencv2/opencv.hpp"
+
 namespace locate_stylus
 {
-
-class LocateStylus::_Impl
-{
-public:
-  explicit _Impl(LocateStylus * ptr)
-  : _node(ptr)
-  {
-  }
-
-  ~_Impl()
-  {
-  }
-
-private:
-  LocateStylus * _node;
-};
 
 LocateStylus::LocateStylus(const rclcpp::NodeOptions & options)
 : Node("locate_stylus_node", options)
 {
-  _init = std::thread(&LocateStylus::_Init, this);
+  _pub = this->create_publisher<String>(_pub_name, 10);
+
+  _workers = this->declare_parameter<int>("workers", 1);
+
+  for (int i = 0; i < _workers; ++i) {
+    _threads.push_back(std::thread(&LocateStylus::_worker, this));
+  }
+  _threads.push_back(std::thread(&LocateStylus::_manager, this));
+
+  _sub = this->create_subscription<Image>(
+    _sub_name,
+    rclcpp::SensorDataQoS(),
+    [this](Image::UniquePtr ptr)
+    {
+      _push_back_image(std::move(ptr));
+    }
+  );
+
+  RCLCPP_INFO(this->get_logger(), "Initialized successfully");
 }
 
 LocateStylus::~LocateStylus()
 {
-  _init.join();
-
-  _srv.reset();
-  _sub.reset();
-  _impl.reset();
-  _pub.reset();
-
-  RCLCPP_INFO(this->get_logger(), "Destroyed successfully");
-}
-
-void LocateStylus::_Init()
-{
   try {
-    _InitializeParameters();
+    _sub.reset();
+    _images_con.notify_all();
+    _futures_con.notify_one();
+    for (auto & t : _threads) {
+      t.join();
+    }
+    _pub.reset();
 
-    _UpdateParameters();
-
-    _pub = this->create_publisher<std_msgs::msg::String>(_pubName, 10);
-
-    _impl = std::make_unique<_Impl>(this);
-
-    _sub = this->create_subscription<std_msgs::msg::String>(
-      _subName,
-      10,
-      std::bind(&LocateStylus::_Sub, this, std::placeholders::_1));
-
-    _srv = this->create_service<std_srvs::srv::Trigger>(
-      _srvName,
-      std::bind(&LocateStylus::_Srv, this, std::placeholders::_1, std::placeholders::_2));
-
-    RCLCPP_INFO(this->get_logger(), "Initialized successfully");
+    RCLCPP_INFO(this->get_logger(), "Destroyed successfully");
   } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in initializer: %s", e.what());
-    rclcpp::shutdown();
+    RCLCPP_ERROR(this->get_logger(), "Exception in destructor: %s", e.what());
   } catch (...) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in initializer: unknown");
-    rclcpp::shutdown();
+    RCLCPP_ERROR(this->get_logger(), "Exception in destructor: unknown");
   }
 }
 
-void LocateStylus::_Sub(std_msgs::msg::String::UniquePtr /*ptr*/)
+void LocateStylus::_worker()
 {
-  try {
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in subscription: %s", e.what());
-  } catch (...) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in subscription: unknown");
+  // cv::Mat buf;
+  while (rclcpp::ok()) {
+    std::unique_lock<std::mutex> lk(_images_mut);
+    if (_images.empty() == false) {
+      auto ptr = std::move(_images.front());
+      _images.pop_front();
+      std::promise<String::UniquePtr> prom;
+      _push_back_future(prom.get_future());
+      lk.unlock();
+      auto msg = std::make_unique<String>();
+      msg->data = "abcd";
+      prom.set_value(std::move(msg));
+    } else {
+      _images_con.wait(lk);
+    }
   }
 }
 
-void LocateStylus::_Srv(
-  const std::shared_ptr<std_srvs::srv::Trigger::Request>/*request*/,
-  std::shared_ptr<std_srvs::srv::Trigger::Response>/*response*/)
+void LocateStylus::_manager()
 {
-  try {
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in service: %s", e.what());
-  } catch (...) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in service: unknown");
+  while (rclcpp::ok()) {
+    std::unique_lock<std::mutex> lk(_futures_mut);
+    if (_futures.empty() == false) {
+      auto f = std::move(_futures.front());
+      _futures.pop_front();
+      lk.unlock();
+      auto ptr = f.get();
+      _pub->publish(std::move(ptr));
+    } else {
+      _futures_con.wait(lk);
+    }
   }
 }
 
-void LocateStylus::_InitializeParameters()
+void LocateStylus::_push_back_image(Image::UniquePtr ptr)
 {
-  // this->declare_parameter("");
+  std::unique_lock<std::mutex> lk(_images_mut);
+  _images.emplace_back(std::move(ptr));
+  auto s = static_cast<int>(_images.size());
+  if (s > _workers + 1) {
+    _images.pop_front();
+    RCLCPP_WARN(this->get_logger(), "Image skipped");
+  }
+  lk.unlock();
+  _images_con.notify_all();
 }
 
-void LocateStylus::_UpdateParameters()
+void LocateStylus::_push_back_future(std::future<String::UniquePtr> fut)
 {
-  // this->get_parameter("", );
+  std::unique_lock<std::mutex> lk(_futures_mut);
+  _futures.emplace_back(std::move(fut));
+  lk.unlock();
+  _futures_con.notify_one();
 }
 
 }  // namespace locate_stylus

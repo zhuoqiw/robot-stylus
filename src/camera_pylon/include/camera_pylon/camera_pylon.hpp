@@ -37,19 +37,17 @@ class CameraPylon : public rclcpp::Node
 
 public:
   /**
-   * @brief Construct a new Camera Pylon object.
+   * @brief Construct a new CameraPylon object.
    *
    * Initialize publisher.
-   * Create an inner implementation.
    * Print success if all done.
    * @param options Encapsulation of options for node initialization.
    */
   explicit CameraPylon(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
   /**
-   * @brief Destroy the Camera Pylon object.
+   * @brief Destroy the CameraPylon object.
    *
-   * Release inner implementation.
    * Release publisher.
    * Print success if all done.
    * Throw no exception.
