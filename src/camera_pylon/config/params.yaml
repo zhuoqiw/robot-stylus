@@ -1,4 +1,4 @@
 camera_pylon_node:
   ros__parameters:
     workers: 1
-    serial: '40146418'
+    serial: '22404673'

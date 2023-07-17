@@ -101,7 +101,7 @@ private:
    * @brief Subscription name.
    *
    */
-  const char * _sub_name = "/camera_pylon_node/image";  // TODO(imp)
+  const char * _sub_name = "~/image";  // TODO(imp)
 
   /**
    * @brief Shared pointer to Subscription.
