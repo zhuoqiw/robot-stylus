@@ -1,5 +1,5 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // See https://code.visualstudio.com/docs/editor/tasks#vscode
     // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
@@ -55,6 +55,28 @@
             "detail": "Test GUI use ros2 humble",
             "type": "shell",
             "command": "docker run --rm --network=host --env=DISPLAY -v /tmp/.X11-unix -v $(pwd)/tools/seam_tracking_gui:/gui zhuoqiw/sunny-tis:jammy-gui /gui/main.py",
+            "problemMatcher": [],
+            "group": {
+                "kind": "none",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "overlay",
+            "detail": "source ros2",
+            "type": "shell",
+            "command": "echo \"source ${workspaceFolder}/install/local_setup.bash\" >> ~/.bashrc",
+            "problemMatcher": [],
+            "group": {
+                "kind": "none",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "undo overlay",
+            "detail": "source ros2",
+            "type": "shell",
+            "command": "sed -i '/local_setup.bash/d' ~/.bashrc",
             "problemMatcher": [],
             "group": {
                 "kind": "none",
