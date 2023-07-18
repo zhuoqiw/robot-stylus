@@ -63,7 +63,7 @@
         },
         {
             "label": "overlay",
-            "detail": "source ros2",
+            "detail": "source workspace",
             "type": "shell",
             "command": "echo \"source ${workspaceFolder}/install/local_setup.bash\" >> ~/.bashrc",
             "problemMatcher": [],
@@ -73,8 +73,8 @@
             }
         },
         {
-            "label": "undo overlay",
-            "detail": "source ros2",
+            "label": "overlay undo",
+            "detail": "undo source workspace",
             "type": "shell",
             "command": "sed -i '/local_setup.bash/d' ~/.bashrc",
             "problemMatcher": [],
