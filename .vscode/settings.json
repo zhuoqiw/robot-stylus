@@ -1,6 +1,7 @@
 {
     "cmake.configureOnOpen": false,
     "C_Cpp.errorSquiggles": "disabled",
+    "files.trimTrailingWhitespace": true,
     "[cpp]": {
         "editor.tabSize": 2
     },
