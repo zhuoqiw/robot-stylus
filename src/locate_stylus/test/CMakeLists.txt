@@ -1,0 +1,9 @@
+macro(test filename)
+    add_executable(${filename} ${filename}.cpp)
+    target_link_libraries(${filename} locate_stylus)
+    target_include_directories(${filename} PUBLIC ${CMAKE_SOURCE_DIR}/include)
+    add_test(NAME ${filename} COMMAND ${filename})
+endmacro()
+
+test(empty_memcpy)
+test(empty_point_cloud2)
