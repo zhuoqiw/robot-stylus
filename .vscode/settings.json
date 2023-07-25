@@ -1,4 +1,13 @@
 {
     "cmake.configureOnOpen": false,
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "disabled",
+    "[cpp]": {
+        "editor.tabSize": 2
+    },
+    "[python]": {
+        "editor.tabSize": 4
+    },
+    "[cmake]": {
+        "editor.tabSize": 2
+    }
 }
