@@ -24,7 +24,7 @@ namespace locate_stylus
 LocateStylus::LocateStylus(const rclcpp::NodeOptions & options)
 : Node("locate_stylus_node", options)
 {
-  _pub = this->create_publisher<String>(_pub_name, 10);
+  _pub = this->create_publisher<PointCloud2>(_pub_name, rclcpp::SensorDataQoS());
 
   _workers = this->declare_parameter<int>("workers", 1);
 
@@ -72,11 +72,10 @@ void LocateStylus::_worker()
     if (_images.empty() == false) {
       auto ptr = std::move(_images.front());
       _images.pop_front();
-      std::promise<String::UniquePtr> prom;
+      std::promise<PointCloud2::UniquePtr> prom;
       _push_back_future(prom.get_future());
       lk.unlock();
-      auto msg = std::make_unique<String>();
-      msg->data = "abcd";
+      auto msg = std::make_unique<PointCloud2>();
       prom.set_value(std::move(msg));
     } else {
       _images_con.wait(lk);
@@ -113,7 +112,7 @@ void LocateStylus::_push_back_image(Image::UniquePtr ptr)
   _images_con.notify_all();
 }
 
-void LocateStylus::_push_back_future(std::future<String::UniquePtr> fut)
+void LocateStylus::_push_back_future(std::future<PointCloud2::UniquePtr> fut)
 {
   std::unique_lock<std::mutex> lk(_futures_mut);
   _futures.emplace_back(std::move(fut));

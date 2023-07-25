@@ -22,12 +22,14 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
 
 namespace locate_stylus
 {
 
 using std_msgs::msg::String;
 using sensor_msgs::msg::Image;
+using sensor_msgs::msg::PointCloud2;
 
 class LocateStylus : public rclcpp::Node
 {
@@ -82,20 +84,20 @@ private:
    *
    * @param f A future to point cloud msg.
    */
-  void _push_back_future(std::future<String::UniquePtr> fut);
+  void _push_back_future(std::future<PointCloud2::UniquePtr> fut);
 
 private:
   /**
    * @brief Publisher name.
    *
    */
-  const char * _pub_name = "~/pub";  // TODO(imp)
+  const char * _pub_name = "~/points";  // TODO(imp)
 
   /**
    * @brief Shared pointer to publisher.
    *
    */
-  rclcpp::Publisher<String>::SharedPtr _pub;
+  rclcpp::Publisher<PointCloud2>::SharedPtr _pub;
 
   /**
    * @brief Subscription name.
@@ -149,7 +151,7 @@ private:
    * @brief Double end queue for results.
    *
    */
-  std::deque<std::future<String::UniquePtr>> _futures;
+  std::deque<std::future<PointCloud2::UniquePtr>> _futures;
 
   /**
    * @brief Threads for workers and the manager.
