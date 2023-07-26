@@ -31,6 +31,23 @@ using std_msgs::msg::String;
 using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
 
+/**
+ * @brief Construct ROS point cloud message from vector of floats.
+ *
+ * @param pnts a sequence of floats as points' uv coordinate.
+ * @exception std::invalid_argument size is not a multiple of 2.
+ * @return PointCloud2::UniquePtr point cloud message to publish.
+ */
+PointCloud2::UniquePtr to_pc2(const std::vector<float> & pnts);
+
+/**
+ * @brief Construct vector of floats from ROS point cloud message.
+ *
+ * @param ptr PointCloud2::UniquePtr point cloud message to publish.
+ * @return std::vector<float> a sequence of floats as points' uv coordinate.
+ */
+std::vector<float> from_pc2(const PointCloud2::UniquePtr & ptr);
+
 class LocateStylus : public rclcpp::Node
 {
 public:

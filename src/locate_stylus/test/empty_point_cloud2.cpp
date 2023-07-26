@@ -21,22 +21,22 @@ using sensor_msgs::msg::PointCloud2;
 
 int main(int argc, char ** argv)
 {
-  // Initializes ROS 2 C++ client library.
+  // Initializes ROS 2 C++ client library
   rclcpp::init(argc, argv);
 
-  // Creates a node named empty_point_cloud2.
+  // Creates a node named empty_point_cloud2
   auto node = rclcpp::Node::make_shared("empty_point_cloud2");
 
-  // A publisher is initialized.
+  // A publisher is initialized
   auto pub = node->create_publisher<PointCloud2>("~/points", rclcpp::SensorDataQoS());
 
-  // An empty PointCloud2 message.
+  // An empty PointCloud2 message
   auto msg = std::make_unique<PointCloud2>();
 
-  // The message is published.
+  // The message is published
   pub->publish(std::move(msg));
 
-  // Shut down the system.
+  // Shut down the system
   rclcpp::shutdown();
 
   return 0;

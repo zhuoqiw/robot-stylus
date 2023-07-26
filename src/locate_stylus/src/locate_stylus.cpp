@@ -21,6 +21,52 @@
 namespace locate_stylus
 {
 
+PointCloud2::UniquePtr to_pc2(const std::vector<float> & pnts)
+{
+  if (pnts.size() % 2 != 0) {
+    throw std::invalid_argument("Size is not a multiple of 2.");
+  }
+
+  auto ptr = std::make_unique<PointCloud2>();
+
+  auto num = pnts.size() / 2;
+
+  ptr->height = 1;
+  ptr->width = num;
+
+  ptr->fields.resize(2);
+
+  ptr->fields[0].name = "u";
+  ptr->fields[0].offset = 0;
+  ptr->fields[0].datatype = 7;
+  ptr->fields[0].count = 1;
+
+  ptr->fields[1].name = "v";
+  ptr->fields[1].offset = 4;
+  ptr->fields[1].datatype = 7;
+  ptr->fields[1].count = 1;
+
+  ptr->is_bigendian = false;
+  ptr->point_step = 4 * 2;
+  ptr->row_step = num * 4 * 2;
+
+  ptr->data.resize(num * 4 * 2);
+
+  ptr->is_dense = true;
+
+  memcpy(ptr->data.data(), pnts.data(), num * 4 * 2);
+
+  return ptr;
+}
+
+std::vector<float> from_pc2(const PointCloud2::UniquePtr & ptr)
+{
+  auto num = ptr->width;
+  std::vector<float> pnts(num * 2);
+  memcpy(pnts.data(), ptr->data.data(), num * 4 * 2);
+  return pnts;
+}
+
 LocateStylus::LocateStylus(const rclcpp::NodeOptions & options)
 : Node("locate_stylus_node", options)
 {
