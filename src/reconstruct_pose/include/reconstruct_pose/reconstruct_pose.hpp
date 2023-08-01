@@ -15,44 +15,125 @@
 #ifndef RECONSTRUCT_POSE__RECONSTRUCT_POSE_HPP_
 #define RECONSTRUCT_POSE__RECONSTRUCT_POSE_HPP_
 
+#include <deque>
 #include <memory>
+#include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
-#include "std_srvs/srv/trigger.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
+#include "tf2_ros/transform_broadcaster.h"
 
 namespace reconstruct_pose
 {
 
+using sensor_msgs::msg::PointCloud2;
+
 class ReconstructPose : public rclcpp::Node
 {
 public:
+  /**
+   * @brief Construct a new ReconstructPose object.
+   *
+   * Initialize broadcaster.
+   * Print success if all done.
+   * @param options Encapsulation of options for node initialization.
+   */
   explicit ReconstructPose(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
+
+  /**
+   * @brief Destroy the LocateStylus object.
+   *
+   * Release broadcaster.
+   * Print success if all done.
+   * Throw no exception.
+   */
   virtual ~ReconstructPose();
 
 private:
-  void _Init();
-  void _InitializeParameters();
-  void _UpdateParameters();
-  void _Sub(std_msgs::msg::String::UniquePtr ptr);  // TODO(imp)
-  void _Srv(
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response);  // TODO(imp)
+  /**
+   * @brief The worker works in seperate thread to process incoming date parallelly.
+   *
+   * Create a buffer.
+   * Enter infinite loop.
+   * Wait for incoming data.
+   * Wake up to get a possible data, make a promise and notify the manager.
+   * Continue to work on the data and return to sleep if no further data to process.
+   */
+  void _worker();
+
+  /**
+   * @brief Push a points cloud and notity workers.
+   *
+   * @param ptr Reference to a unique pointer to PointCloud2 to be moved.
+   */
+  void _push_back_l(PointCloud2::UniquePtr ptr);
+
+  /**
+   * @brief Push a points cloud and notity workers.
+   *
+   * @param ptr Reference to a unique pointer to PointCloud2 to be moved.
+   */
+  void _push_back_r(PointCloud2::UniquePtr ptr);
 
 private:
-  const char * _pubName = "~/pub";  // TODO(imp)
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr _pub;
+  /**
+   * @brief The transform broadcaster
+   */
+  std::unique_ptr<tf2_ros::TransformBroadcaster> _tf_broadcaster;
 
-  class _Impl;
-  std::unique_ptr<_Impl> _impl;
+  /**
+   * @brief Subscription name.
+   *
+   */
+  const char * _sub_l_name = "~/points_l";  // TODO(imp)
 
-  const char * _subName = "~/sub";  // TODO(imp)
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr _sub;
+  /**
+   * @brief Shared pointer to Subscription.
+   *
+   */
+  rclcpp::Subscription<PointCloud2>::SharedPtr _sub_l;
 
-  const char * _srvName = "~/srv";  // TODO(imp)
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr _srv;
+  /**
+   * @brief Subscription name.
+   *
+   */
+  const char * _sub_r_name = "~/points_r";  // TODO(imp)
 
-  std::thread _init;
+  /**
+   * @brief Shared pointer to Subscription.
+   *
+   */
+  rclcpp::Subscription<PointCloud2>::SharedPtr _sub_r;
+
+  /**
+   * @brief Mutex to protect image queue.
+   *
+   */
+  std::mutex _mutex;
+
+  /**
+   * @brief Condition variable for image queue.
+   *
+   */
+  std::condition_variable _con;
+
+  /**
+   * @brief Double end queue for PointCloud2.
+   *
+   */
+  std::deque<PointCloud2::UniquePtr> _deq_l;
+
+  /**
+   * @brief Double end queue for PointCloud2.
+   *
+   */
+  std::deque<PointCloud2::UniquePtr> _deq_r;
+
+  /**
+   * @brief Threads for workers and the manager.
+   *
+   */
+  std::vector<std::thread> _threads;
 };
 
 }  // namespace reconstruct_pose

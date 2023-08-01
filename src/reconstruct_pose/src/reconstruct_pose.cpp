@@ -19,100 +19,83 @@
 namespace reconstruct_pose
 {
 
-class ReconstructPose::_Impl
-{
-public:
-  explicit _Impl(ReconstructPose * ptr)
-  : _node(ptr)
-  {
-  }
-
-  ~_Impl()
-  {
-  }
-
-private:
-  ReconstructPose * _node;
-};
-
 ReconstructPose::ReconstructPose(const rclcpp::NodeOptions & options)
 : Node("reconstruct_pose_node", options)
 {
-  _init = std::thread(&ReconstructPose::_Init, this);
+  _tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+
+  _threads.push_back(std::thread(&ReconstructPose::_worker, this));
+
+  _sub_l = this->create_subscription<PointCloud2>(
+    _sub_l_name,
+    rclcpp::SensorDataQoS(),
+    [this](PointCloud2::UniquePtr ptr)
+    {
+      _push_back_l(std::move(ptr));
+    }
+  );
+
+  _sub_r = this->create_subscription<PointCloud2>(
+    _sub_r_name,
+    rclcpp::SensorDataQoS(),
+    [this](PointCloud2::UniquePtr ptr)
+    {
+      _push_back_r(std::move(ptr));
+    }
+  );
+
+  RCLCPP_INFO(this->get_logger(), "Initialized successfully");
 }
 
 ReconstructPose::~ReconstructPose()
 {
-  _init.join();
-
-  _srv.reset();
-  _sub.reset();
-  _impl.reset();
-  _pub.reset();
-
-  RCLCPP_INFO(this->get_logger(), "Destroyed successfully");
-}
-
-void ReconstructPose::_Init()
-{
   try {
-    _InitializeParameters();
+    _sub_l.reset();
+    _sub_r.reset();
+    _con.notify_all();
+    for (auto & t : _threads) {
+      t.join();
+    }
+    _tf_broadcaster.reset();
 
-    _UpdateParameters();
-
-    _pub = this->create_publisher<std_msgs::msg::String>(_pubName, 10);
-
-    _impl = std::make_unique<_Impl>(this);
-
-    _sub = this->create_subscription<std_msgs::msg::String>(
-      _subName,
-      10,
-      std::bind(&ReconstructPose::_Sub, this, std::placeholders::_1));
-
-    _srv = this->create_service<std_srvs::srv::Trigger>(
-      _srvName,
-      std::bind(&ReconstructPose::_Srv, this, std::placeholders::_1, std::placeholders::_2));
-
-    RCLCPP_INFO(this->get_logger(), "Initialized successfully");
+    RCLCPP_INFO(this->get_logger(), "Destroyed successfully");
   } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in initializer: %s", e.what());
-    rclcpp::shutdown();
+    RCLCPP_ERROR(this->get_logger(), "Exception in destructor: %s", e.what());
   } catch (...) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in initializer: unknown");
-    rclcpp::shutdown();
+    RCLCPP_ERROR(this->get_logger(), "Exception in destructor: unknown");
   }
 }
 
-void ReconstructPose::_Sub(std_msgs::msg::String::UniquePtr /*ptr*/)
+void ReconstructPose::_worker()
 {
-  try {
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in subscription: %s", e.what());
-  } catch (...) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in subscription: unknown");
+  while (rclcpp::ok()) {
+    std::unique_lock<std::mutex> lk(_mutex);
+    if (_deq_l.empty() || _deq_r.empty()) {
+      _con.wait(lk);
+    } else {
+      auto pL = std::move(_deq_l.front());
+      auto pR = std::move(_deq_r.front());
+      _deq_l.pop_front();
+      _deq_r.pop_front();
+      lk.unlock();
+    }
   }
 }
 
-void ReconstructPose::_Srv(
-  const std::shared_ptr<std_srvs::srv::Trigger::Request>/*request*/,
-  std::shared_ptr<std_srvs::srv::Trigger::Response>/*response*/)
+void ReconstructPose::_push_back_l(PointCloud2::UniquePtr ptr)
 {
-  try {
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in service: %s", e.what());
-  } catch (...) {
-    RCLCPP_ERROR(this->get_logger(), "Exception in service: unknown");
-  }
+  std::unique_lock<std::mutex> lk(_mutex);
+  _deq_l.emplace_back(std::move(ptr));
+  lk.unlock();
+  _con.notify_all();
 }
 
-void ReconstructPose::_InitializeParameters()
+void ReconstructPose::_push_back_r(PointCloud2::UniquePtr ptr)
 {
-  // this->declare_parameter("");
-}
-
-void ReconstructPose::_UpdateParameters()
-{
-  // this->get_parameter("", );
+  std::unique_lock<std::mutex> lk(_mutex);
+  _deq_r.emplace_back(std::move(ptr));
+  lk.unlock();
+  _con.notify_all();
 }
 
 }  // namespace reconstruct_pose

@@ -19,8 +19,6 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
@@ -38,8 +36,6 @@ target_include_directories(reconstruct_pose
 ament_target_dependencies(reconstruct_pose
   rclcpp
   rclcpp_components
-  std_msgs
-  std_srvs
   sensor_msgs
   geometry_msgs
   tf2

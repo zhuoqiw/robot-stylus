@@ -20,14 +20,12 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 
 namespace locate_stylus
 {
 
-using std_msgs::msg::String;
 using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
 

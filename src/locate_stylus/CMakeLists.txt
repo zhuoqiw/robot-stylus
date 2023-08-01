@@ -19,8 +19,6 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 
@@ -35,8 +33,6 @@ target_include_directories(locate_stylus
 ament_target_dependencies(locate_stylus
   rclcpp
   rclcpp_components
-  std_msgs
-  std_srvs
   sensor_msgs
 )
 
