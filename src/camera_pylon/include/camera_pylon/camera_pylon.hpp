@@ -22,12 +22,14 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
 namespace camera_pylon
 {
 
+using std_msgs::msg::Empty;
 using std_srvs::srv::Trigger;
 using sensor_msgs::msg::Image;
 
@@ -53,21 +55,6 @@ public:
    * Throw no exception.
    */
   virtual ~CameraPylon();
-
-  /**
-   * @brief Set the power's state: on or off.
-   *
-   * @param f true to power on camera.
-   * @return int 0 if success.
-   */
-  // int _power(bool f);
-  // void _Init();
-  // void _InitializeParameters();
-  // void _UpdateParameters();
-  // void _Sub(std_msgs::msg::String::UniquePtr ptr);  // TODO(imp)
-  // void _Srv(
-  //   const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-  //   std::shared_ptr<std_srvs::srv::Trigger::Response> response);  // TODO(imp)
 
 private:
   /**
@@ -107,18 +94,6 @@ private:
   Pylon::CInstantCamera cam;
 
   /**
-   * @brief Service name.
-   *
-   */
-  const char * _srv_trigger_name = "~/trigger";  // TODO(imp)
-
-  /**
-   * @brief Shared pointer to service.
-   *
-   */
-  rclcpp::Service<Trigger>::SharedPtr _srv_trigger;
-
-  /**
    * @brief Publisher name.
    *
    */
@@ -129,6 +104,30 @@ private:
    *
    */
   rclcpp::Publisher<Image>::SharedPtr _pub;
+
+  /**
+   * @brief Subscription name.
+   *
+   */
+  const char * _sub_name = "~/grab";  // TODO(imp)
+
+  /**
+   * @brief Shared pointer to Subscription.
+   *
+   */
+  rclcpp::Subscription<Empty>::SharedPtr _sub;
+
+  /**
+   * @brief Service name.
+   *
+   */
+  const char * _srv_name = "~/trigger";  // TODO(imp)
+
+  /**
+   * @brief Shared pointer to service.
+   *
+   */
+  rclcpp::Service<Trigger>::SharedPtr _srv;
 
   /**
    * @brief Number of co-workers.

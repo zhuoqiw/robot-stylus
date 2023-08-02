@@ -102,8 +102,17 @@ CameraPylon::CameraPylon(const rclcpp::NodeOptions & options)
 
   _pub = this->create_publisher<Image>(_pub_name, rclcpp::SensorDataQoS());
 
-  _srv_trigger = this->create_service<Trigger>(
-    _srv_trigger_name,
+  _sub = this->create_subscription<Empty>(
+    _sub_name,
+    10,
+    [this](Empty::UniquePtr)
+    {
+      cam.ExecuteSoftwareTrigger();
+    }
+  );
+
+  _srv = this->create_service<Trigger>(
+    _srv_name,
     [this](
       const std::shared_ptr<Trigger::Request>/*request*/,
       std::shared_ptr<Trigger::Response> response)
@@ -121,14 +130,22 @@ CameraPylon::~CameraPylon()
   cam.Attach(NULL);
   PylonTerminate();
   RCLCPP_INFO(this->get_logger(), "count: %i, id: %i", COUNT, ID);
-  // _init.join();
+  try {
+    _srv.reset();
+    _sub.reset();
+    _images_con.notify_all();
+    _futures_con.notify_one();
+    for (auto & t : _threads) {
+      t.join();
+    }
+    _pub.reset();
 
-  // _srv.reset();
-  // _sub.reset();
-  // _impl.reset();
-  // _pub.reset();
-
-  RCLCPP_INFO(this->get_logger(), "Destroyed successfully");
+    RCLCPP_INFO(this->get_logger(), "Destroyed successfully");
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Exception in destructor: %s", e.what());
+  } catch (...) {
+    RCLCPP_ERROR(this->get_logger(), "Exception in destructor: unknown");
+  }
 }
 
 void CameraPylon::_worker()
