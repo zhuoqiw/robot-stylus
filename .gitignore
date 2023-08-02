@@ -31,6 +31,9 @@
 *.out
 *.app
 
+# Images
+*.png
+
 # Python
 __pycache__
 

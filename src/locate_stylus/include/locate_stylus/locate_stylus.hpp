@@ -23,6 +23,8 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 
+#include "opencv2/opencv.hpp"
+
 namespace locate_stylus
 {
 
@@ -45,6 +47,8 @@ PointCloud2::UniquePtr to_pc2(const std::vector<float> & pnts);
  * @return std::vector<float> a sequence of floats as points' uv coordinate.
  */
 std::vector<float> from_pc2(const PointCloud2::UniquePtr & ptr);
+
+std::vector<float> locate(cv::Mat & img);
 
 class LocateStylus : public rclcpp::Node
 {

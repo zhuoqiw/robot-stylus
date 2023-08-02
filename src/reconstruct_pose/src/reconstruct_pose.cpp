@@ -18,10 +18,45 @@
 
 namespace reconstruct_pose
 {
+std::vector<cv::Point3f> DST{{279, 60, 966}, {281, 29, 963}, {283, -8, 930}, {280, -65, 924}, {265, -139, 942}, {266, -180, 939}};
+
+std::vector<cv::Point2f> from_pc2(const PointCloud2::UniquePtr & ptr)
+{
+  auto num = ptr->width;
+  std::vector<cv::Point2f> pnts(num);
+  memcpy(pnts.data(), ptr->data.data(), num * 4 * 2);
+  return pnts;
+}
 
 ReconstructPose::ReconstructPose(const rclcpp::NodeOptions & options)
 : Node("reconstruct_pose_node", options)
 {
+  std::vector<double> temp, vd;
+
+  vd = this->declare_parameter<std::vector<double>>("camera_matrix_1", temp);
+  _c[0] = cv::Mat(3, 3, CV_64F, vd.data()).clone();
+
+  vd = this->declare_parameter<std::vector<double>>("camera_matrix_2", temp);
+  _c[1] = cv::Mat(3, 3, CV_64F, vd.data()).clone();
+
+  vd = this->declare_parameter<std::vector<double>>("dist_coeffs_1", temp);
+  _d[0] = cv::Mat(1, 5, CV_64F, vd.data()).clone();
+
+  vd = this->declare_parameter<std::vector<double>>("dist_coeffs_2", temp);
+  _d[1] = cv::Mat(1, 5, CV_64F, vd.data()).clone();
+
+  vd = this->declare_parameter<std::vector<double>>("r_1", temp);
+  _r[0] = cv::Mat(3, 3, CV_64F, vd.data()).clone();
+
+  vd = this->declare_parameter<std::vector<double>>("r_2", temp);
+  _r[1] = cv::Mat(3, 3, CV_64F, vd.data()).clone();
+
+  vd = this->declare_parameter<std::vector<double>>("p_1", temp);
+  _p[0] = cv::Mat(3, 4, CV_64F, vd.data()).clone();
+
+  vd = this->declare_parameter<std::vector<double>>("p_2", temp);
+  _p[1] = cv::Mat(3, 4, CV_64F, vd.data()).clone();
+
   _tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   _threads.push_back(std::thread(&ReconstructPose::_worker, this));
@@ -78,7 +113,29 @@ void ReconstructPose::_worker()
       _deq_l.pop_front();
       _deq_r.pop_front();
       lk.unlock();
-      RCLCPP_INFO(this->get_logger(), "id: %s, %s", pL->header.frame_id.c_str(), pR->header.frame_id.c_str());
+      auto v1 = from_pc2(pL);
+      auto v2 = from_pc2(pR);
+      if (v1.size() != 6 || v2.size() != 6) {
+        RCLCPP_INFO(this->get_logger(), "Not pair by number, %ld, %ld", v1.size(), v2.size());
+        continue;   // Not pair by number
+      } else {
+        std::vector<cv::Point2f> uv1, uv2;
+        cv::undistortPoints(v1, uv1, _c[0], _d[0], _r[0], _p[0]);
+        cv::undistortPoints(v2, uv2, _c[1], _d[1], _r[1], _p[1]);
+
+        for (size_t count = 0; count < 6; ++count) {
+          if (abs(uv1[count].y - uv2[count].y) > 3.) {
+            RCLCPP_INFO(this->get_logger(), "Not pair by epipolar line constrain");
+            continue; // Not pair by epipolar line constrain
+          }
+        }
+        // RCLCPP_INFO(this->get_logger(), "Paired!");
+        cv::Mat pnts, src;
+        cv::triangulatePoints(_p[0], _p[1], uv1, uv2, pnts);
+        cv::convertPointsFromHomogeneous(pnts.t(), src);
+        auto ret = cv::estimateAffine3D(src, DST);
+        RCLCPP_INFO(this->get_logger(), "Paired!");
+      }
     }
   }
 }

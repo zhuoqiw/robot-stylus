@@ -23,10 +23,20 @@
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "tf2_ros/transform_broadcaster.h"
 
+#include "opencv2/opencv.hpp"
+
 namespace reconstruct_pose
 {
 
 using sensor_msgs::msg::PointCloud2;
+
+/**
+ * @brief Construct vector of floats from ROS point cloud message.
+ *
+ * @param ptr PointCloud2::UniquePtr point cloud message to publish.
+ * @return std::vector<float> a sequence of floats as points' uv coordinate.
+ */
+std::vector<cv::Point2f> from_pc2(const PointCloud2::UniquePtr & ptr);
 
 class ReconstructPose : public rclcpp::Node
 {
@@ -134,6 +144,8 @@ private:
    *
    */
   std::vector<std::thread> _threads;
+
+  cv::Mat _c[2], _d[2], _r[2], _p[2];
 };
 
 }  // namespace reconstruct_pose

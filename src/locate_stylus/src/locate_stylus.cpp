@@ -67,6 +67,23 @@ std::vector<float> from_pc2(const PointCloud2::UniquePtr & ptr)
   return pnts;
 }
 
+std::vector<float> locate(cv::Mat & img)
+{
+  std::vector<float> ret;
+  cv::Mat dst;
+  cv::threshold(img, dst, 200, 255, cv::THRESH_BINARY);
+  std::vector<std::vector<cv::Point>> contours;
+  cv::findContours(dst, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
+  ret.reserve(contours.size() * 2);
+  for (auto & contour : contours) {
+    auto rr = cv::boundingRect(contour);
+    ret.push_back(rr.x * 2. + rr.width);   // bin 2
+    ret.push_back(rr.y * 2. + rr.height);  // bin 2
+  }
+
+  return ret;
+}
+
 LocateStylus::LocateStylus(const rclcpp::NodeOptions & options)
 : Node("locate_stylus_node", options)
 {
@@ -121,7 +138,9 @@ void LocateStylus::_worker()
       std::promise<PointCloud2::UniquePtr> prom;
       _push_back_future(prom.get_future());
       lk.unlock();
-      auto msg = std::make_unique<PointCloud2>();
+      cv::Mat img(ptr->height, ptr->width, CV_8UC1, ptr->data.data());
+      auto pnts = locate(img);
+      auto msg = to_pc2(pnts);
       msg->header = ptr->header;
       prom.set_value(std::move(msg));
     } else {

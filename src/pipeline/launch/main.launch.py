@@ -23,10 +23,10 @@ Only pointers to image are copied to minimize CPU consumption.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import os
-# import yaml
+import os
+import yaml
 import launch
-# from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_share_directory
 from launch_ros.descriptions import ComposableNode
 from launch_ros.actions import ComposableNodeContainer
 # from launch_ros.actions import Node
@@ -65,9 +65,19 @@ def generate_launch_description():
         remappings=[('~/image', '/camera_pylon_node_r/image')],
         extra_arguments=[{'use_intra_process_comms': True}])
 
+    configFile = os.path.join(
+        get_package_share_directory('reconstruct_pose'),
+        'config',
+        'params.yaml'
+    )
+
+    with open(configFile, 'r') as file:
+        params = yaml.safe_load(file)['reconstruct_pose_node']['ros__parameters']
+
     reconstruct_pose_node = ComposableNode(
         package='reconstruct_pose',
         plugin='reconstruct_pose::ReconstructPose',
+        parameters=[params],
         remappings=[('~/points_l', '/locate_stylus_node_l/points'),
                     ('~/points_r', '/locate_stylus_node_r/points')],
         extra_arguments=[{'use_intra_process_comms': True}])
