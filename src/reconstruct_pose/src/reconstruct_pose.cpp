@@ -78,6 +78,7 @@ void ReconstructPose::_worker()
       _deq_l.pop_front();
       _deq_r.pop_front();
       lk.unlock();
+      RCLCPP_INFO(this->get_logger(), "id: %s, %s", pL->header.frame_id.c_str(), pR->header.frame_id.c_str());
     }
   }
 }

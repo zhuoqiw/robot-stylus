@@ -38,6 +38,7 @@ def generate_launch_description():
         plugin='camera_pylon::CameraPylon',
         name='camera_pylon_node_l',
         parameters=[{'workers': 1, 'serial': '22404673'}],
+        remappings=[('~/grab', '/grab')],
         extra_arguments=[{'use_intra_process_comms': True}])
 
     camera_pylon_node_r = ComposableNode(
@@ -45,6 +46,7 @@ def generate_launch_description():
         plugin='camera_pylon::CameraPylon',
         name='camera_pylon_node_r',
         parameters=[{'workers': 1, 'serial': '22935134'}],
+        remappings=[('~/grab', '/grab')],
         extra_arguments=[{'use_intra_process_comms': True}])
 
     locate_stylus_node_l = ComposableNode(
@@ -63,6 +65,13 @@ def generate_launch_description():
         remappings=[('~/image', '/camera_pylon_node_r/image')],
         extra_arguments=[{'use_intra_process_comms': True}])
 
+    reconstruct_pose_node = ComposableNode(
+        package='reconstruct_pose',
+        plugin='reconstruct_pose::ReconstructPose',
+        remappings=[('~/points_l', '/locate_stylus_node_l/points'),
+                    ('~/points_r', '/locate_stylus_node_r/points')],
+        extra_arguments=[{'use_intra_process_comms': True}])
+
     container = ComposableNodeContainer(
         name='pipeline_container',
         namespace='',
@@ -72,7 +81,8 @@ def generate_launch_description():
             camera_pylon_node_l,
             camera_pylon_node_r,
             locate_stylus_node_l,
-            locate_stylus_node_r],
+            locate_stylus_node_r,
+            reconstruct_pose_node],
         output='screen')
 
     return launch.LaunchDescription([container])

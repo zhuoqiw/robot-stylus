@@ -122,6 +122,7 @@ void LocateStylus::_worker()
       _push_back_future(prom.get_future());
       lk.unlock();
       auto msg = std::make_unique<PointCloud2>();
+      msg->header = ptr->header;
       prom.set_value(std::move(msg));
     } else {
       _images_con.wait(lk);

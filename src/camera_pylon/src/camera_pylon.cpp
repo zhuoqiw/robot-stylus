@@ -156,6 +156,8 @@ void CameraPylon::_worker()
     if (_images.empty() == false) {
       auto ptr = _images.front();
       _images.pop_front();
+      COUNT++;
+      ID = ptr->GetImageNumber();
       std::promise<Image::UniquePtr> prom;
       _push_back_future(prom.get_future());
       lk.unlock();
@@ -194,8 +196,6 @@ void CameraPylon::_manager()
 
 void CameraPylon::_push_back_image(const CGrabResultPtr & rhs)
 {
-  COUNT++;
-  ID = rhs->GetImageNumber();
   std::unique_lock<std::mutex> lk(_images_mut);
   _images.push_back(rhs);
   auto s = static_cast<int>(_images.size());
