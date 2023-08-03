@@ -14,11 +14,17 @@
 
 #include "reconstruct_pose/reconstruct_pose.hpp"
 
-#include <memory>
+#include "tf2/LinearMath/Quaternion.h"
 
 namespace reconstruct_pose
 {
-std::vector<cv::Point3f> DST{{279, 60, 966}, {281, 29, 963}, {283, -8, 930}, {280, -65, 924}, {265, -139, 942}, {266, -180, 939}};
+std::vector<cv::Point3f> DST{
+  {279, 60, 966},
+  {281, 29, 963},
+  {283, -8, 930},
+  {280, -65, 924},
+  {265, -139, 942},
+  {266, -180, 939}};
 
 std::vector<cv::Point2f> from_pc2(const PointCloud2::UniquePtr & ptr)
 {
@@ -26,6 +32,32 @@ std::vector<cv::Point2f> from_pc2(const PointCloud2::UniquePtr & ptr)
   std::vector<cv::Point2f> pnts(num);
   memcpy(pnts.data(), ptr->data.data(), num * 4 * 2);
   return pnts;
+}
+
+void getQuaternion(const cv::Mat & R, double Q[])
+{
+  double trace = R.at<double>(0, 0) + R.at<double>(1, 1) + R.at<double>(2, 2);
+
+  if (trace > 0.0) {
+    double s = sqrt(trace + 1.0);
+    Q[3] = (s * 0.5);
+    s = 0.5 / s;
+    Q[0] = ((R.at<double>(2, 1) - R.at<double>(1, 2)) * s);
+    Q[1] = ((R.at<double>(0, 2) - R.at<double>(2, 0)) * s);
+    Q[2] = ((R.at<double>(1, 0) - R.at<double>(0, 1)) * s);
+  } else {
+    int i = R.at<double>(0, 0) < R.at<double>(1, 1) ? (R.at<double>(1, 1) < R.at<double>(2, 2) ? 2 : 1) : (R.at<double>(0, 0) < R.at<double>(2, 2) ? 2 : 0);
+    int j = (i + 1) % 3;
+    int k = (i + 2) % 3;
+
+    double s = sqrt(R.at<double>(i, i) - R.at<double>(j, j) - R.at<double>(k, k) + 1.0);
+    Q[i] = s * 0.5;
+    s = 0.5 / s;
+
+    Q[3] = (R.at<double>(k, j) - R.at<double>(j, k)) * s;
+    Q[j] = (R.at<double>(j, i) + R.at<double>(i, j)) * s;
+    Q[k] = (R.at<double>(k, i) + R.at<double>(i, k)) * s;
+  }
 }
 
 ReconstructPose::ReconstructPose(const rclcpp::NodeOptions & options)
@@ -134,7 +166,25 @@ void ReconstructPose::_worker()
         cv::triangulatePoints(_p[0], _p[1], uv1, uv2, pnts);
         cv::convertPointsFromHomogeneous(pnts.t(), src);
         auto ret = cv::estimateAffine3D(src, DST);
-        RCLCPP_INFO(this->get_logger(), "Paired!");
+        geometry_msgs::msg::TransformStamped t;
+        t.header.stamp = this->now();
+        t.header.frame_id = "vision";
+        t.child_frame_id = "stylus";
+
+        t.transform.translation.x = ret.at<double>(0, 3) / 1000.;
+        t.transform.translation.y = ret.at<double>(1, 3) / 1000.;
+        t.transform.translation.z = ret.at<double>(2, 3) / 1000.;
+
+        double q[4];
+        getQuaternion(ret, q);
+        t.transform.rotation.x = q[0];
+        t.transform.rotation.y = q[1];
+        t.transform.rotation.z = q[2];
+        t.transform.rotation.w = q[3];
+
+        _tf_broadcaster->sendTransform(t);
+
+        // RCLCPP_INFO(this->get_logger(), "Paired!");
       }
     }
   }
