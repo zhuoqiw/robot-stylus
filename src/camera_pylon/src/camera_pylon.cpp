@@ -57,6 +57,19 @@ private:
   CameraPylon * _ptr;
 };
 
+Image::UniquePtr execute(const Pylon::CGrabResultPtr & ptr)
+{
+  auto msg = std::make_unique<Image>();
+  auto h = msg->height = ptr->GetHeight();
+  auto w = msg->width = ptr->GetWidth();
+  msg->encoding = "mono8";
+  msg->is_bigendian = false;
+  msg->step = w;
+  msg->data.resize(w * h);
+  memcpy(msg->data.data(), ptr->GetBuffer(), w * h);
+  return msg;
+}
+
 CameraPylon::CameraPylon(const rclcpp::NodeOptions & options)
 : Node("camera_pylon_node", options)
 {
@@ -161,16 +174,9 @@ void CameraPylon::_worker()
       std::promise<Image::UniquePtr> prom;
       _push_back_future(prom.get_future());
       lk.unlock();
-      auto msg = std::make_unique<Image>();
+      auto msg = execute(ptr);
       msg->header.stamp = this->now();
       msg->header.frame_id = std::to_string(ptr->GetImageNumber());
-      msg->height = ptr->GetHeight();
-      msg->width = ptr->GetWidth();
-      msg->encoding = "mono8";
-      msg->is_bigendian = false;
-      msg->step = msg->width;
-      msg->data.resize(msg->height * msg->width);
-      memcpy(msg->data.data(), ptr->GetBuffer(), msg->height * msg->width);
       prom.set_value(std::move(msg));
     } else {
       _images_con.wait(lk);

@@ -33,6 +33,8 @@ using std_msgs::msg::Empty;
 using std_srvs::srv::Trigger;
 using sensor_msgs::msg::Image;
 
+Image::UniquePtr execute(const Pylon::CGrabResultPtr & ptr);
+
 class CameraPylon : public rclcpp::Node
 {
   friend class CImageEventPrinter;
