@@ -91,6 +91,8 @@ ReconstructPose::ReconstructPose(const rclcpp::NodeOptions & options)
 
   _tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
+  _pub = this->create_publisher<PointCloud2>(_pub_name, rclcpp::SensorDataQoS());
+
   _threads.push_back(std::thread(&ReconstructPose::_worker, this));
 
   _sub_l = this->create_subscription<PointCloud2>(
@@ -165,24 +167,24 @@ void ReconstructPose::_worker()
         cv::Mat pnts, src;
         cv::triangulatePoints(_p[0], _p[1], uv1, uv2, pnts);
         cv::convertPointsFromHomogeneous(pnts.t(), src);
-        auto ret = cv::estimateAffine3D(src, DST);
-        geometry_msgs::msg::TransformStamped t;
-        t.header.stamp = this->now();
-        t.header.frame_id = "vision";
-        t.child_frame_id = "stylus";
+        // auto ret = cv::estimateAffine3D(src, DST);
+        // geometry_msgs::msg::TransformStamped t;
+        // t.header.stamp = this->now();
+        // t.header.frame_id = "vision";
+        // t.child_frame_id = "stylus";
 
-        t.transform.translation.x = ret.at<double>(0, 3) / 1000.;
-        t.transform.translation.y = ret.at<double>(1, 3) / 1000.;
-        t.transform.translation.z = ret.at<double>(2, 3) / 1000.;
+        // t.transform.translation.x = ret.at<double>(0, 3) / 1000.;
+        // t.transform.translation.y = ret.at<double>(1, 3) / 1000.;
+        // t.transform.translation.z = ret.at<double>(2, 3) / 1000.;
 
-        double q[4];
-        getQuaternion(ret, q);
-        t.transform.rotation.x = q[0];
-        t.transform.rotation.y = q[1];
-        t.transform.rotation.z = q[2];
-        t.transform.rotation.w = q[3];
+        // double q[4];
+        // getQuaternion(ret, q);
+        // t.transform.rotation.x = q[0];
+        // t.transform.rotation.y = q[1];
+        // t.transform.rotation.z = q[2];
+        // t.transform.rotation.w = q[3];
 
-        _tf_broadcaster->sendTransform(t);
+        // _tf_broadcaster->sendTransform(t);
 
         // RCLCPP_INFO(this->get_logger(), "Paired!");
       }

@@ -92,6 +92,18 @@ private:
   std::unique_ptr<tf2_ros::TransformBroadcaster> _tf_broadcaster;
 
   /**
+   * @brief Publisher name.
+   *
+   */
+  const char * _pub_name = "~/points";  // TODO(imp)
+
+  /**
+   * @brief Shared pointer to publisher.
+   *
+   */
+  rclcpp::Publisher<PointCloud2>::SharedPtr _pub;
+
+  /**
    * @brief Subscription name.
    *
    */
