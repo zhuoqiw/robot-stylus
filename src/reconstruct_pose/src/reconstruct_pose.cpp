@@ -26,12 +26,11 @@ std::vector<cv::Point3f> DST{
   {265, -139, 942},
   {266, -180, 939}};
 
-std::vector<cv::Point2f> from_pc2(const PointCloud2::UniquePtr & ptr)
+cv::Mat from_pc2(const PointCloud2::UniquePtr & ptr)
 {
   auto num = ptr->width;
-  std::vector<cv::Point2f> pnts(num);
-  memcpy(pnts.data(), ptr->data.data(), num * 4 * 2);
-  return pnts;
+  auto ret = cv::Mat_<float>(num, 2, static_cast<float *>(ptr->data.data()));
+  return ret.clone();
 }
 
 void getQuaternion(const cv::Mat & R, double Q[])
@@ -46,7 +45,9 @@ void getQuaternion(const cv::Mat & R, double Q[])
     Q[1] = ((R.at<double>(0, 2) - R.at<double>(2, 0)) * s);
     Q[2] = ((R.at<double>(1, 0) - R.at<double>(0, 1)) * s);
   } else {
-    int i = R.at<double>(0, 0) < R.at<double>(1, 1) ? (R.at<double>(1, 1) < R.at<double>(2, 2) ? 2 : 1) : (R.at<double>(0, 0) < R.at<double>(2, 2) ? 2 : 0);
+    int i = R.at<double>(0, 0) < R.at<double>(1, 1) ?
+      (R.at<double>(1, 1) < R.at<double>(2, 2) ? 2 : 1) :
+      (R.at<double>(0, 0) < R.at<double>(2, 2) ? 2 : 0);
     int j = (i + 1) % 3;
     int k = (i + 2) % 3;
 
@@ -147,25 +148,25 @@ void ReconstructPose::_worker()
       _deq_l.pop_front();
       _deq_r.pop_front();
       lk.unlock();
-      auto v1 = from_pc2(pL);
-      auto v2 = from_pc2(pR);
-      if (v1.size() != 6 || v2.size() != 6) {
-        RCLCPP_INFO(this->get_logger(), "Not pair by number, %ld, %ld", v1.size(), v2.size());
+      auto p0 = from_pc2(pL);
+      auto p1 = from_pc2(pR);
+      if (p0.size() != 6 || p1.size() != 6) {
+        RCLCPP_INFO(this->get_logger(), "Not pair by number, %ld, %ld", p0.size(), p1.size());
         continue;   // Not pair by number
       } else {
-        std::vector<cv::Point2f> uv1, uv2;
-        cv::undistortPoints(v1, uv1, _c[0], _d[0], _r[0], _p[0]);
-        cv::undistortPoints(v2, uv2, _c[1], _d[1], _r[1], _p[1]);
+        cv::Mat up0, up1;
+        cv::undistortPoints(p0, up0, _c[0], _d[0], _r[0], _p[0]);
+        cv::undistortPoints(p1, up1, _c[1], _d[1], _r[1], _p[1]);
 
         for (size_t count = 0; count < 6; ++count) {
-          if (abs(uv1[count].y - uv2[count].y) > 3.) {
+          if (abs(up0[count].y - up1[count].y) > 3.) {
             RCLCPP_INFO(this->get_logger(), "Not pair by epipolar line constrain");
-            continue; // Not pair by epipolar line constrain
+            continue;   // Not pair by epipolar line constrain
           }
         }
         // RCLCPP_INFO(this->get_logger(), "Paired!");
         cv::Mat pnts, src;
-        cv::triangulatePoints(_p[0], _p[1], uv1, uv2, pnts);
+        cv::triangulatePoints(_p[0], _p[1], up0, up1, pnts);
         cv::convertPointsFromHomogeneous(pnts.t(), src);
         // auto ret = cv::estimateAffine3D(src, DST);
         // geometry_msgs::msg::TransformStamped t;
