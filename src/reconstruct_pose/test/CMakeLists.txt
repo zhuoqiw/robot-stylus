@@ -6,3 +6,4 @@ macro(test filename)
 endmacro()
 
 test(triangulate_points)
+test(to_from_point_cloud2)

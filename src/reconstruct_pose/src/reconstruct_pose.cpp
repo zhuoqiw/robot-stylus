@@ -26,10 +26,85 @@ std::vector<cv::Point3f> DST{
   {265, -139, 942},
   {266, -180, 939}};
 
+PointCloud2::UniquePtr to_pc2(const cv::Mat & pnts)
+{
+  if (pnts.type() != CV_32F && pnts.type() != CV_64F) {
+    throw std::invalid_argument("Type is neither float nor double.");
+  }
+
+  if (pnts.cols < 3) {
+    throw std::invalid_argument("Mat should be at least 3 columns.");
+  }
+
+  auto ptr = std::make_unique<PointCloud2>();
+
+  auto num = pnts.rows;
+
+  auto offset = pnts.type() == CV_64F ? 8 : 4;
+  auto datatype = pnts.type() == CV_64F ? 8 : 7;
+
+  ptr->height = 1;
+  ptr->width = num;
+
+  ptr->fields.resize(3);
+
+  ptr->fields[0].name = "x";
+  ptr->fields[0].offset = offset * 0;
+  ptr->fields[0].datatype = datatype;
+  ptr->fields[0].count = 1;
+
+  ptr->fields[1].name = "y";
+  ptr->fields[1].offset = offset * 1;
+  ptr->fields[1].datatype = datatype;
+  ptr->fields[1].count = 1;
+
+  ptr->fields[1].name = "z";
+  ptr->fields[1].offset = offset * 2;
+  ptr->fields[1].datatype = datatype;
+  ptr->fields[1].count = 1;
+
+  ptr->is_bigendian = false;
+  ptr->point_step = offset * 3;
+  ptr->row_step = num * offset * 3;
+
+  ptr->data.resize(num * offset * 3);
+
+  ptr->is_dense = true;
+
+  if (pnts.type() == CV_64F) {
+    auto m = cv::Mat_<double>(num, 3, reinterpret_cast<double *>(ptr->data.data()));
+    m.colRange(0, 3) = pnts.colRange(0, 3);
+    // for (auto i = 0; i < num; ++i) {
+    //   m(i, 0) = pnts.at<double>(i, 0);
+    //   m(i, 1) = pnts.at<double>(i, 1);
+    //   m(i, 2) = pnts.at<double>(i, 2);
+    // }
+  } else {
+    auto m = cv::Mat_<float>(num, 3, reinterpret_cast<float *>(ptr->data.data()));
+    m.colRange(0, 3) = pnts.colRange(0, 3);
+    // for (auto i = 0; i < num; ++i) {
+    //   m(i, 0) = pnts.at<float>(i, 0);
+    //   m(i, 1) = pnts.at<float>(i, 1);
+    //   m(i, 2) = pnts.at<float>(i, 2);
+    // }
+  }
+
+  return ptr;
+}
+
 cv::Mat from_pc2(const PointCloud2::UniquePtr & ptr)
 {
+  // bool same = true;
+  // for (const auto & f : ptr->fields) {
+  //   if (f.datatype != 7) {
+  //     same = false;
+  //     break;
+  //   }
+  // }
+
+  // bool same
   auto num = ptr->width;
-  auto ret = cv::Mat_<float>(num, 2, static_cast<float *>(ptr->data.data()));
+  auto ret = cv::Mat_<float>(num, 2, reinterpret_cast<float *>(ptr->data.data()));
   return ret.clone();
 }
 
@@ -150,20 +225,20 @@ void ReconstructPose::_worker()
       lk.unlock();
       auto p0 = from_pc2(pL);
       auto p1 = from_pc2(pR);
-      if (p0.size() != 6 || p1.size() != 6) {
-        RCLCPP_INFO(this->get_logger(), "Not pair by number, %ld, %ld", p0.size(), p1.size());
+      if (p0.rows != 6 || p1.rows != 6) {
+        RCLCPP_INFO(this->get_logger(), "Not pair by number, %d, %d", p0.rows, p1.rows);
         continue;   // Not pair by number
       } else {
         cv::Mat up0, up1;
         cv::undistortPoints(p0, up0, _c[0], _d[0], _r[0], _p[0]);
         cv::undistortPoints(p1, up1, _c[1], _d[1], _r[1], _p[1]);
 
-        for (size_t count = 0; count < 6; ++count) {
-          if (abs(up0[count].y - up1[count].y) > 3.) {
-            RCLCPP_INFO(this->get_logger(), "Not pair by epipolar line constrain");
-            continue;   // Not pair by epipolar line constrain
-          }
-        }
+        // for (size_t count = 0; count < 6; ++count) {
+        //   if (abs(up0[count].y - up1[count].y) > 3.) {
+        //     RCLCPP_INFO(this->get_logger(), "Not pair by epipolar line constrain");
+        //     continue;   // Not pair by epipolar line constrain
+        //   }
+        // }
         // RCLCPP_INFO(this->get_logger(), "Paired!");
         cv::Mat pnts, src;
         cv::triangulatePoints(_p[0], _p[1], up0, up1, pnts);

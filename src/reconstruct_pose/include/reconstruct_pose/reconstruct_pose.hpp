@@ -31,6 +31,14 @@ namespace reconstruct_pose
 using sensor_msgs::msg::PointCloud2;
 
 /**
+ * @brief Construct ROS 3D point cloud message from Nx3 1-channel Mat.
+ *
+ * @param pnts Nx3 1-channel Mat.
+ * @return PointCloud2::UniquePtr point cloud message to publish.
+ */
+PointCloud2::UniquePtr to_pc2(const cv::Mat & pnts);
+
+/**
  * @brief Construct vector of floats from ROS point cloud message.
  *
  * @param ptr PointCloud2::UniquePtr point cloud message to publish.

@@ -14,8 +14,6 @@
 
 #undef NDEBUG
 
-#include <chrono>
-
 #include "reconstruct_pose/reconstruct_pose.hpp"
 
 int main(int /*argc*/, char ** /*argv*/)
@@ -59,14 +57,14 @@ int main(int /*argc*/, char ** /*argv*/)
   auto p0 = cv::Mat_<double>(3, 4, proL);
   auto p1 = cv::Mat_<double>(3, 4, proR);
 
-  float v0[12] = {
+  double v0[12] = {
     1320.0, 860.0,
     1326.0, 786.0,
     1354.0, 696.0,
     1351.0, 554.0,
     1302.0, 375.0,
     1306.0, 275.0};
-  float v1[12] = {
+  double v1[12] = {
     869.0, 921.0,
     872.0, 847.0,
     857.0, 755.0,
@@ -74,8 +72,8 @@ int main(int /*argc*/, char ** /*argv*/)
     821.0, 435.0,
     823.0, 335.0};
 
-  auto pnts0 = cv::Mat_<float>(6, 2, v0);
-  auto pnts1 = cv::Mat_<float>(6, 2, v1);
+  auto pnts0 = cv::Mat_<double>(6, 2, v0);
+  auto pnts1 = cv::Mat_<double>(6, 2, v1);
   cv::Mat upnts0, upnts1, pnts4D;
   cv::undistortPoints(pnts0, upnts0, c0, d0, r0, p0);
   cv::undistortPoints(pnts1, upnts1, c1, d1, r1, p1);
@@ -85,4 +83,6 @@ int main(int /*argc*/, char ** /*argv*/)
 
   cv::triangulatePoints(p0, p1, upnts0, upnts1, pnts4D);
   std::cout << pnts4D << std::endl;
+  std::cout << pnts4D.type() << std::endl;
+  std::cout << CV_64F << std::endl;
 }
