@@ -32,30 +32,30 @@ int main(int /*argc*/, char ** /*argv*/)
   double disR[] = {
     -1.5868913120695460e-01, 1.1985018123339684e-01, 3.3259328128667386e-05,
     1.4906857068374316e-04, 1.0078485762652550e-01};
-  double recL[] = {
-    9.8653748817720632e-01, -1.4936211295192368e-03, 1.6352844864710853e-01,
-    1.7558018938361965e-04, 9.9996738796879669e-01, 8.0741668585229548e-03,
-    -1.6353517539846177e-01, -7.9367559357478110e-03, 9.8650557743613942e-01};
-  double recR[] = {
-    9.8330698914932346e-01, -1.8548295194217668e-03, -1.8194483971123246e-01,
-    3.8715213292001542e-04, 9.9996710500500829e-01, -8.1017912296343555e-03,
-    1.8195388207817434e-01, 7.8961076079601608e-03, 9.8327536137204485e-01};
-  double proL[] = {
-    2.3971283924548252e+03, 0., 1.0609726867675781e+03, 0.,
-    0., 2.3971283924548252e+03, 7.4409719085693359e+02, 0.,
-    0., 0., 1., 0.};
-  double proR[] = {
-    2.3971283924548252e+03, 0., 1.0609726867675781e+03, -1.2555569131423391e+06,
-    0., 2.3971283924548252e+03, 7.4409719085693359e+02, 0.,
-    0., 0., 1., 0.};
+  double R[] = {
+    9.4031341513862454e-01, -2.5256721423111048e-03, 3.4030031191664573e-01,
+    -2.9455757840460097e-03, 9.9987459498021269e-01, 1.5560138060317327e-02,
+    -3.4029693635652564e-01, -1.5633786917610453e-02, 9.4018805555749196e-01};
+  double T[] = {-5.1503202408916297e-01, 9.7151409709307290e-04, 9.5298233515178865e-02};
+
+  double P[] = {
+    0.2794257888387648, 0.06033236020688468, 0.965578877363138,
+    0.2813044624014014, 0.02944443632489939, 0.9633302159173989,
+    0.2834064713081882, -0.008072515285469335, 0.9304445205122588,
+    0.2801647345230634, -0.06512649960154904, 0.9237126100815688,
+    0.2651154022300604, -0.1388610695871446, 0.9417144820023857,
+    0.2663857287273995, -0.1796075476032378, 0.9394877529170468};
+
+  auto dst = cv::Mat(6, 3, CV_64F, P);
   auto c0 = cv::Mat_<double>(3, 3, camL);
   auto c1 = cv::Mat_<double>(3, 3, camR);
   auto d0 = cv::Mat_<double>(1, 5, disL);
   auto d1 = cv::Mat_<double>(1, 5, disR);
-  auto r0 = cv::Mat_<double>(3, 3, recL);
-  auto r1 = cv::Mat_<double>(3, 3, recR);
-  auto p0 = cv::Mat_<double>(3, 4, proL);
-  auto p1 = cv::Mat_<double>(3, 4, proR);
+  auto rr = cv::Mat_<double>(3, 3, R);
+  auto rt = cv::Mat_<double>(3, 1, T);
+
+  cv::Mat r0, r1, p0, p1, Q;
+  cv::stereoRectify(c0, d0, c1, d1, cv::Size(2048, 1536), rr, rt, r0, r1, p0, p1, Q);
 
   double v0[12] = {
     1320.0, 860.0,
@@ -74,15 +74,24 @@ int main(int /*argc*/, char ** /*argv*/)
 
   auto pnts0 = cv::Mat_<double>(6, 2, v0);
   auto pnts1 = cv::Mat_<double>(6, 2, v1);
-  cv::Mat upnts0, upnts1, pnts4D;
+  cv::Mat upnts0, upnts1, pnts4D, pnts;
   cv::undistortPoints(pnts0, upnts0, c0, d0, r0, p0);
   cv::undistortPoints(pnts1, upnts1, c1, d1, r1, p1);
 
-  std::cout << upnts0 - upnts1 << std::endl;
-  // std::cout << upnts1 << std::endl;
+  auto dif = cv::Mat_<double>(upnts0.reshape(1).col(1) - upnts1.reshape(1).col(1));
+
+  for (auto it = dif.begin(); it != dif.end(); ++it) {
+    assert(*it > -2. && *it < 2.);
+  }
 
   cv::triangulatePoints(p0, p1, upnts0, upnts1, pnts4D);
-  std::cout << pnts4D << std::endl;
-  std::cout << pnts4D.type() << std::endl;
-  std::cout << CV_64F << std::endl;
+  cv::convertPointsFromHomogeneous(pnts4D.t(), pnts);
+
+  dif = cv::Mat_<double>(dst - pnts.reshape(1));
+
+  for (auto it = dif.begin(); it != dif.end(); ++it) {
+    assert(*it > -0.001 && *it < 0.001);
+  }
+
+  return 0;
 }

@@ -26,8 +26,10 @@ std::vector<cv::Point3f> DST{
   {265, -139, 942},
   {266, -180, 939}};
 
-PointCloud2::UniquePtr to_pc2(const cv::Mat & pnts)
+PointCloud2::UniquePtr to_pc2(const cv::Mat & src)
 {
+  auto pnts = src.reshape(1);
+
   if (pnts.type() != CV_32F && pnts.type() != CV_64F) {
     throw std::invalid_argument("Type is neither float nor double.");
   }
@@ -58,10 +60,10 @@ PointCloud2::UniquePtr to_pc2(const cv::Mat & pnts)
   ptr->fields[1].datatype = datatype;
   ptr->fields[1].count = 1;
 
-  ptr->fields[1].name = "z";
-  ptr->fields[1].offset = offset * 2;
-  ptr->fields[1].datatype = datatype;
-  ptr->fields[1].count = 1;
+  ptr->fields[2].name = "z";
+  ptr->fields[2].offset = offset * 2;
+  ptr->fields[2].datatype = datatype;
+  ptr->fields[2].count = 1;
 
   ptr->is_bigendian = false;
   ptr->point_step = offset * 3;
@@ -73,20 +75,18 @@ PointCloud2::UniquePtr to_pc2(const cv::Mat & pnts)
 
   if (pnts.type() == CV_64F) {
     auto m = cv::Mat_<double>(num, 3, reinterpret_cast<double *>(ptr->data.data()));
-    m.colRange(0, 3) = pnts.colRange(0, 3);
-    // for (auto i = 0; i < num; ++i) {
-    //   m(i, 0) = pnts.at<double>(i, 0);
-    //   m(i, 1) = pnts.at<double>(i, 1);
-    //   m(i, 2) = pnts.at<double>(i, 2);
-    // }
+    for (auto i = 0; i < num; ++i) {
+      m(i, 0) = pnts.at<double>(i, 0);
+      m(i, 1) = pnts.at<double>(i, 1);
+      m(i, 2) = pnts.at<double>(i, 2);
+    }
   } else {
     auto m = cv::Mat_<float>(num, 3, reinterpret_cast<float *>(ptr->data.data()));
-    m.colRange(0, 3) = pnts.colRange(0, 3);
-    // for (auto i = 0; i < num; ++i) {
-    //   m(i, 0) = pnts.at<float>(i, 0);
-    //   m(i, 1) = pnts.at<float>(i, 1);
-    //   m(i, 2) = pnts.at<float>(i, 2);
-    // }
+    for (auto i = 0; i < num; ++i) {
+      m(i, 0) = pnts.at<float>(i, 0);
+      m(i, 1) = pnts.at<float>(i, 1);
+      m(i, 2) = pnts.at<float>(i, 2);
+    }
   }
 
   return ptr;
@@ -94,18 +94,30 @@ PointCloud2::UniquePtr to_pc2(const cv::Mat & pnts)
 
 cv::Mat from_pc2(const PointCloud2::UniquePtr & ptr)
 {
-  // bool same = true;
-  // for (const auto & f : ptr->fields) {
-  //   if (f.datatype != 7) {
-  //     same = false;
-  //     break;
-  //   }
-  // }
+  if (ptr->fields.empty()) {
+    throw std::invalid_argument("Empty fields.");
+  }
 
-  // bool same
+  for (size_t i = 1; i < ptr->fields.size(); ++i) {
+    if (ptr->fields[i].datatype != ptr->fields[i - 1].datatype) {
+      throw std::invalid_argument("Fields are not homogeneous.");
+    }
+  }
+
+  if (ptr->fields[0].datatype != 7 && ptr->fields[0].datatype != 8) {
+    throw std::invalid_argument("Type is neither float nor double.");
+  }
+
   auto num = ptr->width;
-  auto ret = cv::Mat_<float>(num, 2, reinterpret_cast<float *>(ptr->data.data()));
-  return ret.clone();
+  auto dim = ptr->fields.size();
+
+  if (ptr->fields[0].datatype == 7) {
+    auto ret = cv::Mat_<float>(num, dim, reinterpret_cast<float *>(ptr->data.data()));
+    return ret.clone();
+  } else {
+    auto ret = cv::Mat_<double>(num, dim, reinterpret_cast<double *>(ptr->data.data()));
+    return ret.clone();
+  }
 }
 
 void getQuaternion(const cv::Mat & R, double Q[])
@@ -153,19 +165,16 @@ ReconstructPose::ReconstructPose(const rclcpp::NodeOptions & options)
   vd = this->declare_parameter<std::vector<double>>("dist_coeffs_2", temp);
   _d[1] = cv::Mat(1, 5, CV_64F, vd.data()).clone();
 
-  vd = this->declare_parameter<std::vector<double>>("r_1", temp);
-  _r[0] = cv::Mat(3, 3, CV_64F, vd.data()).clone();
+  vd = this->declare_parameter<std::vector<double>>("R", temp);
+  auto R = cv::Mat(3, 3, CV_64F, vd.data());
 
-  vd = this->declare_parameter<std::vector<double>>("r_2", temp);
-  _r[1] = cv::Mat(3, 3, CV_64F, vd.data()).clone();
+  vd = this->declare_parameter<std::vector<double>>("T", temp);
+  auto T = cv::Mat(3, 1, CV_64F, vd.data());
 
-  vd = this->declare_parameter<std::vector<double>>("p_1", temp);
-  _p[0] = cv::Mat(3, 4, CV_64F, vd.data()).clone();
+  cv::Mat Q;
+  cv::stereoRectify(_c[0], _d[0], _c[1], _d[1], cv::Size(2048, 1536), R, T, _r[0], _r[1], _p[0], _p[1], Q);
 
-  vd = this->declare_parameter<std::vector<double>>("p_2", temp);
-  _p[1] = cv::Mat(3, 4, CV_64F, vd.data()).clone();
-
-  _tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+  // _tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   _pub = this->create_publisher<PointCloud2>(_pub_name, rclcpp::SensorDataQoS());
 
@@ -233,16 +242,22 @@ void ReconstructPose::_worker()
         cv::undistortPoints(p0, up0, _c[0], _d[0], _r[0], _p[0]);
         cv::undistortPoints(p1, up1, _c[1], _d[1], _r[1], _p[1]);
 
-        // for (size_t count = 0; count < 6; ++count) {
-        //   if (abs(up0[count].y - up1[count].y) > 3.) {
+        // auto dif = cv::Mat_<double>(up0.col(1) - up1.col(1));
+
+        // for (auto iter = dif.begin(); iter != dif.end(); ++iter) {
+        //   if (abs(*iter) > 3.) {
         //     RCLCPP_INFO(this->get_logger(), "Not pair by epipolar line constrain");
         //     continue;   // Not pair by epipolar line constrain
         //   }
         // }
         // RCLCPP_INFO(this->get_logger(), "Paired!");
-        cv::Mat pnts, src;
-        cv::triangulatePoints(_p[0], _p[1], up0, up1, pnts);
-        cv::convertPointsFromHomogeneous(pnts.t(), src);
+        cv::Mat pnts4D, pnts;
+        cv::triangulatePoints(_p[0], _p[1], up0, up1, pnts4D);
+        cv::convertPointsFromHomogeneous(pnts4D.t(), pnts);
+        auto msg = to_pc2(pnts);
+        msg->header.stamp = this->now();
+        msg->header.frame_id = "stylus";
+        _pub->publish(std::move(msg));
         // auto ret = cv::estimateAffine3D(src, DST);
         // geometry_msgs::msg::TransformStamped t;
         // t.header.stamp = this->now();
