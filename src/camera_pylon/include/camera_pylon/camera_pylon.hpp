@@ -33,11 +33,22 @@ using std_msgs::msg::Empty;
 using std_srvs::srv::Trigger;
 using sensor_msgs::msg::Image;
 
+/**
+ * @brief Construct an image message from pylon.
+ *
+ * @param ptr a smart pointer holding a reference to pylon grab result data.
+ * @exception std::invalid_argument invalid pylon grab result data.
+ * @return Image::UniquePtr image to publish.
+ */
 Image::UniquePtr execute(const Pylon::CGrabResultPtr & ptr);
 
 class CameraPylon : public rclcpp::Node
 {
-  friend class CImageEventPrinter;
+  /**
+   * @brief The image event handler class.
+   *
+   */
+  friend class _CImageEventHandler;
 
 public:
   /**
@@ -93,6 +104,10 @@ private:
   void _push_back_future(std::future<Image::UniquePtr> fut);
 
 private:
+  /**
+   * @brief Provides convenient access to a camera device.
+   *
+   */
   Pylon::CInstantCamera cam;
 
   /**
@@ -111,7 +126,7 @@ private:
    * @brief Subscription name.
    *
    */
-  const char * _sub_name = "~/grab";  // TODO(imp)
+  const char * _sub_name = "~/grab";
 
   /**
    * @brief Shared pointer to Subscription.
@@ -123,7 +138,7 @@ private:
    * @brief Service name.
    *
    */
-  const char * _srv_name = "~/trigger";  // TODO(imp)
+  const char * _srv_name = "~/trigger";
 
   /**
    * @brief Shared pointer to service.

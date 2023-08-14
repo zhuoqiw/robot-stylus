@@ -20,27 +20,33 @@
 
 namespace camera_pylon
 {
-int COUNT = 0;
-int ID = 0;
 
 using namespace Pylon;  // NOLINT
 
-/**
- * @brief Basler time stamp, ticks per second.
- *
- */
-constexpr int TICKS_PER_SEC = 1000000000;
+Image::UniquePtr execute(const Pylon::CGrabResultPtr & ptr)
+{
+  if (ptr->GetPixelType() != EPixelType::PixelType_Mono8) {
+    throw std::invalid_argument("Only mono 8 is supported.");
+  }
+  if (ptr->GetBufferSize() != ptr->GetHeight() * ptr->GetWidth()) {
+    throw std::invalid_argument("Buffer is not continuous.");
+  }
 
-/**
- * @brief Basler image buffer number.
- *
- */
-constexpr int BUFFER_NUMBER = 10;
+  auto msg = std::make_unique<Image>();
+  msg->height = ptr->GetHeight();
+  msg->width = ptr->GetWidth();
+  msg->encoding = "mono8";
+  msg->is_bigendian = false;
+  msg->step = ptr->GetWidth();
+  msg->data.resize(ptr->GetBufferSize());
+  memcpy(msg->data.data(), ptr->GetBuffer(), ptr->GetBufferSize());
+  return msg;
+}
 
-class CImageEventPrinter : public CImageEventHandler
+class _CImageEventHandler : public CImageEventHandler
 {
 public:
-  explicit CImageEventPrinter(CameraPylon * ptr)
+  explicit _CImageEventHandler(CameraPylon * ptr)
   : _ptr(ptr) {}
 
   virtual void OnImageGrabbed(CInstantCamera & /*camera*/, const CGrabResultPtr & ptrGrabResult)
@@ -49,26 +55,16 @@ public:
     if (ptrGrabResult->GrabSucceeded()) {
       _ptr->_push_back_image(ptrGrabResult);
     } else {
-      RCLCPP_WARN(_ptr->get_logger(), "Image broken");
+      RCLCPP_WARN(
+        _ptr->get_logger(),
+        "Camera error: %s",
+        ptrGrabResult->GetErrorDescription().c_str());
     }
   }
 
 private:
   CameraPylon * _ptr;
 };
-
-Image::UniquePtr execute(const Pylon::CGrabResultPtr & ptr)
-{
-  auto msg = std::make_unique<Image>();
-  auto h = msg->height = ptr->GetHeight();
-  auto w = msg->width = ptr->GetWidth();
-  msg->encoding = "mono8";
-  msg->is_bigendian = false;
-  msg->step = w;
-  msg->data.resize(w * h);
-  memcpy(msg->data.data(), ptr->GetBuffer(), w * h);
-  return msg;
-}
 
 CameraPylon::CameraPylon(const rclcpp::NodeOptions & options)
 : Node("camera_pylon_node", options)
@@ -105,7 +101,7 @@ CameraPylon::CameraPylon(const rclcpp::NodeOptions & options)
   // an image event handler processing the grab
   // results must be created and registered.
   cam.RegisterImageEventHandler(
-    new CImageEventPrinter(this),
+    new _CImageEventHandler(this),
     RegistrationMode_Append,
     Cleanup_Delete);
 
@@ -120,7 +116,11 @@ CameraPylon::CameraPylon(const rclcpp::NodeOptions & options)
     10,
     [this](Empty::UniquePtr)
     {
-      cam.ExecuteSoftwareTrigger();
+      try {
+        cam.ExecuteSoftwareTrigger();
+      } catch (const Pylon::GenericException & e) {
+        RCLCPP_WARN(this->get_logger(), "Pylon exception: %s", e.what());
+      }
     }
   );
 
@@ -130,8 +130,13 @@ CameraPylon::CameraPylon(const rclcpp::NodeOptions & options)
       const std::shared_ptr<Trigger::Request>/*request*/,
       std::shared_ptr<Trigger::Response> response)
     {
-      response->success = true;
-      cam.ExecuteSoftwareTrigger();
+      try {
+        cam.ExecuteSoftwareTrigger();
+        response->success = true;
+      } catch (const Pylon::GenericException & e) {
+        response->message = std::string(e.what());
+        response->success = false;
+      }
     }
   );
 
@@ -142,7 +147,6 @@ CameraPylon::~CameraPylon()
 {
   cam.Attach(NULL);
   PylonTerminate();
-  RCLCPP_INFO(this->get_logger(), "count: %i, id: %i", COUNT, ID);
   try {
     _srv.reset();
     _sub.reset();
@@ -169,8 +173,6 @@ void CameraPylon::_worker()
     if (_images.empty() == false) {
       auto ptr = _images.front();
       _images.pop_front();
-      COUNT++;
-      ID = ptr->GetImageNumber();
       std::promise<Image::UniquePtr> prom;
       _push_back_future(prom.get_future());
       lk.unlock();
@@ -205,7 +207,7 @@ void CameraPylon::_push_back_image(const CGrabResultPtr & rhs)
   std::unique_lock<std::mutex> lk(_images_mut);
   _images.push_back(rhs);
   auto s = static_cast<int>(_images.size());
-  if (s >= BUFFER_NUMBER - 1) {
+  if (s > _workers + 1) {
     _images.pop_front();
     RCLCPP_WARN(this->get_logger(), "Image skipped");
   }
