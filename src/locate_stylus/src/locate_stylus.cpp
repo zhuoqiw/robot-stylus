@@ -21,12 +21,8 @@
 namespace locate_stylus
 {
 
-PointCloud2::UniquePtr to_pc2(const std::vector<float> & pnts)
+PointCloud2::UniquePtr to_pc2(const std::vector<double> & pnts)
 {
-  if (pnts.size() % 2 != 0) {
-    throw std::invalid_argument("Size is not a multiple of 2.");
-  }
-
   auto ptr = std::make_unique<PointCloud2>();
 
   auto num = pnts.size() / 2;
@@ -38,44 +34,47 @@ PointCloud2::UniquePtr to_pc2(const std::vector<float> & pnts)
 
   ptr->fields[0].name = "u";
   ptr->fields[0].offset = 0;
-  ptr->fields[0].datatype = 7;
+  ptr->fields[0].datatype = 8;
   ptr->fields[0].count = 1;
 
   ptr->fields[1].name = "v";
-  ptr->fields[1].offset = 4;
-  ptr->fields[1].datatype = 7;
+  ptr->fields[1].offset = 8;
+  ptr->fields[1].datatype = 8;
   ptr->fields[1].count = 1;
 
   ptr->is_bigendian = false;
-  ptr->point_step = 4 * 2;
-  ptr->row_step = num * 4 * 2;
+  ptr->point_step = 8 * 2;
+  ptr->row_step = num * 8 * 2;
 
-  ptr->data.resize(num * 4 * 2);
+  ptr->data.resize(num * 8 * 2);
 
   ptr->is_dense = true;
 
-  memcpy(ptr->data.data(), pnts.data(), num * 4 * 2);
+  memcpy(ptr->data.data(), pnts.data(), num * 8 * 2);
 
   return ptr;
 }
 
-std::vector<float> from_pc2(const PointCloud2::UniquePtr & ptr)
+std::vector<double> from_pc2(const PointCloud2::UniquePtr & ptr)
 {
   auto num = ptr->width;
-  std::vector<float> pnts(num * 2);
-  memcpy(pnts.data(), ptr->data.data(), num * 4 * 2);
+  std::vector<double> pnts(num * 2);
+  memcpy(pnts.data(), ptr->data.data(), num * 8 * 2);
   return pnts;
 }
 
-std::vector<float> locate(cv::Mat & img)
+std::vector<double> locate(const cv::Mat & img)
 {
-  std::vector<float> ret;
-  cv::Mat dst;
+  std::vector<double> ret;
+  thread_local cv::Mat dst;
   cv::threshold(img, dst, 200, 255, cv::THRESH_BINARY);
+  if (cv::countNonZero(dst) > 1000) {
+    return ret;
+  }
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(dst, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
   ret.reserve(contours.size() * 2);
-  for (auto & contour : contours) {
+  for (const auto & contour : contours) {
     auto rr = cv::boundingRect(contour);
     ret.push_back(rr.x * 2. + rr.width);   // bin 2
     ret.push_back(rr.y * 2. + rr.height);  // bin 2

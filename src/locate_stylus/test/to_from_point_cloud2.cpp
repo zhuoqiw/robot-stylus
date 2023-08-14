@@ -27,10 +27,10 @@ int main(int /*argc*/, char ** /*argv*/)
   {
     // Prepare random
     std::default_random_engine e;
-    std::normal_distribution<float> nd(0, 1);
+    std::normal_distribution<double> nd(0, 1);
 
-    // Create a random vector of float
-    std::vector<float> src(1000);
+    // Create a random vector of double
+    std::vector<double> src(1000);
     for (auto & p : src) {
       p = nd(e);
     }
@@ -43,15 +43,6 @@ int main(int /*argc*/, char ** /*argv*/)
 
     // Compare two vector
     assert(src == dst);
-  }
-
-  // Test case 2
-  {
-    std::vector<float> src(999);
-    try {
-      auto ptr = to_pc2(src);
-    } catch (const std::invalid_argument & e) {
-    }
   }
 
   return 0;

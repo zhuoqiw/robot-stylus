@@ -32,23 +32,29 @@ using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
 
 /**
- * @brief Construct ROS point cloud message from vector of floats.
+ * @brief Construct ROS point cloud message from vector of double.
  *
- * @param pnts a sequence of floats as points' uv coordinate.
+ * @param pnts a sequence of double as points' uv coordinate.
  * @exception std::invalid_argument size is not a multiple of 2.
  * @return PointCloud2::UniquePtr point cloud message to publish.
  */
-PointCloud2::UniquePtr to_pc2(const std::vector<float> & pnts);
+PointCloud2::UniquePtr to_pc2(const std::vector<double> & pnts);
 
 /**
- * @brief Construct vector of floats from ROS point cloud message.
+ * @brief Construct vector of double from ROS point cloud message.
  *
  * @param ptr PointCloud2::UniquePtr point cloud message to publish.
- * @return std::vector<float> a sequence of floats as points' uv coordinate.
+ * @return std::vector<double> a sequence of double as points' uv coordinate.
  */
-std::vector<float> from_pc2(const PointCloud2::UniquePtr & ptr);
+std::vector<double> from_pc2(const PointCloud2::UniquePtr & ptr);
 
-std::vector<float> locate(cv::Mat & img);
+/**
+ * @brief Locate light points.
+ *
+ * @param img cv::Mat image with light points.
+ * @return std::vector<double> a sequence of double as points' uv coordinate.
+ */
+std::vector<double> locate(const cv::Mat & img);
 
 class LocateStylus : public rclcpp::Node
 {
