@@ -105,7 +105,7 @@ def generate_launch_description():
             '--qx', '0',
             '--qy', '0',
             '--qz', '0',
-            '--qw', '0',
+            '--qw', '1',
             '--frame-id', 'world',
             '--child-frame-id', 'stylus']
     )
