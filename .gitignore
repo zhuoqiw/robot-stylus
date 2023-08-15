@@ -41,4 +41,5 @@ __pycache__
 build/
 install/
 log/
+bag/
 core
