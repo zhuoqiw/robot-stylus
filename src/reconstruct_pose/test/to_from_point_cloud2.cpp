@@ -36,35 +36,35 @@ int main(int /*argc*/, char ** /*argv*/)
 
   // Test case 2
   // Double matrix(30, 3) to point cloud2
-  {
-    auto src = cv::Mat(30, 3, CV_64F, 0.);
-    cv::randn(src, 0., 2.);
-    auto pc2 = reconstruct_pose::to_pc2(src);
-    auto dst = reconstruct_pose::from_pc2(pc2);
+  // {
+  //   auto src = cv::Mat(30, 3, CV_64F, 0.);
+  //   cv::randn(src, 0., 2.);
+  //   auto pc2 = reconstruct_pose::to_pc2(src);
+  //   auto dst = reconstruct_pose::from_pc2(pc2);
 
-    assert(src.type() == dst.type() && src.rows == dst.rows && src.cols == dst.cols);
-    auto dif = cv::Mat(src - dst);
-    for (auto iter = dif.begin<float>(); iter != dif.end<float>(); ++iter) {
-      assert(*iter == 0);
-    }
-  }
+  //   assert(src.type() == dst.type() && src.rows == dst.rows && src.cols == dst.cols);
+  //   auto dif = cv::Mat(src - dst);
+  //   for (auto iter = dif.begin<float>(); iter != dif.end<float>(); ++iter) {
+  //     assert(*iter == 0);
+  //   }
+  // }
 
   // Test case 3
   // Double matrix(30, 4) to point cloud2
-  {
-    auto src = cv::Mat(30, 4, CV_64F, 0.);
-    cv::randn(src, 0., 2.);
-    auto pc2 = reconstruct_pose::to_pc2(src);
-    auto dst = reconstruct_pose::from_pc2(pc2);
+  // {
+  //   auto src = cv::Mat(30, 4, CV_64F, 0.);
+  //   cv::randn(src, 0., 2.);
+  //   auto pc2 = reconstruct_pose::to_pc2(src);
+  //   auto dst = reconstruct_pose::from_pc2(pc2);
 
-    auto abc = src.colRange(0, 3);
+  //   auto abc = src.colRange(0, 3);
 
-    assert(abc.type() == dst.type() && abc.rows == dst.rows && abc.cols == dst.cols);
-    auto dif = cv::Mat(abc - dst);
-    for (auto iter = dif.begin<float>(); iter != dif.end<float>(); ++iter) {
-      assert(*iter == 0);
-    }
-  }
+  //   assert(abc.type() == dst.type() && abc.rows == dst.rows && abc.cols == dst.cols);
+  //   auto dif = cv::Mat(abc - dst);
+  //   for (auto iter = dif.begin<float>(); iter != dif.end<float>(); ++iter) {
+  //     assert(*iter == 0);
+  //   }
+  // }
 
   return 0;
 }

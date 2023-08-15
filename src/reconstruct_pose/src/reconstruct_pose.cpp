@@ -42,43 +42,40 @@ PointCloud2::UniquePtr to_pc2(const cv::Mat & src)
 
   auto num = pnts.rows;
 
-  auto offset = pnts.type() == CV_64F ? 8 : 4;
-  auto datatype = pnts.type() == CV_64F ? 8 : 7;
-
   ptr->height = 1;
   ptr->width = num;
 
   ptr->fields.resize(3);
 
   ptr->fields[0].name = "x";
-  ptr->fields[0].offset = offset * 0;
-  ptr->fields[0].datatype = datatype;
+  ptr->fields[0].offset = 0;
+  ptr->fields[0].datatype = 7;
   ptr->fields[0].count = 1;
 
   ptr->fields[1].name = "y";
-  ptr->fields[1].offset = offset * 1;
-  ptr->fields[1].datatype = datatype;
+  ptr->fields[1].offset = 4;
+  ptr->fields[1].datatype = 7;
   ptr->fields[1].count = 1;
 
   ptr->fields[2].name = "z";
-  ptr->fields[2].offset = offset * 2;
-  ptr->fields[2].datatype = datatype;
+  ptr->fields[2].offset = 8;
+  ptr->fields[2].datatype = 7;
   ptr->fields[2].count = 1;
 
   ptr->is_bigendian = false;
-  ptr->point_step = offset * 3;
-  ptr->row_step = num * offset * 3;
+  ptr->point_step = 4 * 3;
+  ptr->row_step = num * 4 * 3;
 
-  ptr->data.resize(num * offset * 3);
+  ptr->data.resize(num * 4 * 3);
 
   ptr->is_dense = true;
 
   if (pnts.type() == CV_64F) {
-    auto m = cv::Mat_<double>(num, 3, reinterpret_cast<double *>(ptr->data.data()));
+    auto m = cv::Mat_<float>(num, 3, reinterpret_cast<float *>(ptr->data.data()));
     for (auto i = 0; i < num; ++i) {
-      m(i, 0) = pnts.at<double>(i, 0);
-      m(i, 1) = pnts.at<double>(i, 1);
-      m(i, 2) = pnts.at<double>(i, 2);
+      m(i, 0) = static_cast<float>(pnts.at<double>(i, 0));
+      m(i, 1) = static_cast<float>(pnts.at<double>(i, 1));
+      m(i, 2) = static_cast<float>(pnts.at<double>(i, 2));
     }
   } else {
     auto m = cv::Mat_<float>(num, 3, reinterpret_cast<float *>(ptr->data.data()));
@@ -153,26 +150,39 @@ ReconstructPose::ReconstructPose(const rclcpp::NodeOptions & options)
 {
   std::vector<double> temp, vd;
 
-  vd = this->declare_parameter<std::vector<double>>("camera_matrix_1", temp);
-  _c[0] = cv::Mat(3, 3, CV_64F, vd.data()).clone();
+  vd = this->declare_parameter<std::vector<double>>("camera_matrix_0", temp);
+  _c0 = cv::Mat(3, 3, CV_64F, vd.data()).clone();
 
-  vd = this->declare_parameter<std::vector<double>>("camera_matrix_2", temp);
-  _c[1] = cv::Mat(3, 3, CV_64F, vd.data()).clone();
+  vd = this->declare_parameter<std::vector<double>>("camera_matrix_1", temp);
+  _c1 = cv::Mat(3, 3, CV_64F, vd.data()).clone();
+
+  vd = this->declare_parameter<std::vector<double>>("dist_coeffs_0", temp);
+  _d0 = cv::Mat(1, 5, CV_64F, vd.data()).clone();
 
   vd = this->declare_parameter<std::vector<double>>("dist_coeffs_1", temp);
-  _d[0] = cv::Mat(1, 5, CV_64F, vd.data()).clone();
-
-  vd = this->declare_parameter<std::vector<double>>("dist_coeffs_2", temp);
-  _d[1] = cv::Mat(1, 5, CV_64F, vd.data()).clone();
+  _d1 = cv::Mat(1, 5, CV_64F, vd.data()).clone();
 
   vd = this->declare_parameter<std::vector<double>>("R", temp);
-  auto R = cv::Mat(3, 3, CV_64F, vd.data());
+  auto R = cv::Mat(3, 3, CV_64F, vd.data()).clone();
 
   vd = this->declare_parameter<std::vector<double>>("T", temp);
-  auto T = cv::Mat(3, 1, CV_64F, vd.data());
+  auto T = cv::Mat(3, 1, CV_64F, vd.data()).clone();
+
+
+  // vd = this->declare_parameter<std::vector<double>>("RL", temp);
+  // _r0 = cv::Mat(3, 3, CV_64F, vd.data());
+
+  // vd = this->declare_parameter<std::vector<double>>("RR", temp);
+  // _r1 = cv::Mat(3, 3, CV_64F, vd.data());
+
+  // vd = this->declare_parameter<std::vector<double>>("PL", temp);
+  // _p0 = cv::Mat(3, 4, CV_64F, vd.data());
+
+  // vd = this->declare_parameter<std::vector<double>>("PR", temp);
+  // _p1 = cv::Mat(3, 4, CV_64F, vd.data());
 
   cv::Mat Q;
-  cv::stereoRectify(_c[0], _d[0], _c[1], _d[1], cv::Size(2048, 1536), R, T, _r[0], _r[1], _p[0], _p[1], Q);
+  cv::stereoRectify(_c0, _d0, _c1, _d1, cv::Size(2048, 1536), R, T, _r0, _r1, _p0, _p1, Q);
 
   // _tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
@@ -239,22 +249,29 @@ void ReconstructPose::_worker()
         continue;   // Not pair by number
       } else {
         cv::Mat up0, up1;
-        cv::undistortPoints(p0, up0, _c[0], _d[0], _r[0], _p[0]);
-        cv::undistortPoints(p1, up1, _c[1], _d[1], _r[1], _p[1]);
 
-        // auto dif = cv::Mat_<double>(up0.col(1) - up1.col(1));
+        cv::undistortPoints(p0, up0, _c0, _d0, _r0, _p0);
+        cv::undistortPoints(p1, up1, _c1, _d1, _r1, _p1);
 
-        // for (auto iter = dif.begin(); iter != dif.end(); ++iter) {
-        //   if (abs(*iter) > 3.) {
-        //     RCLCPP_INFO(this->get_logger(), "Not pair by epipolar line constrain");
-        //     continue;   // Not pair by epipolar line constrain
-        //   }
-        // }
+        auto dif = cv::Mat_<double>(up0.reshape(1).col(1) - up1.reshape(1).col(1));
+        for (auto iter = dif.begin(); iter != dif.end(); ++iter) {
+          if (abs(*iter) > 3.) {
+            RCLCPP_INFO(this->get_logger(), "Not pair by epipolar line constrain");
+            return;   // Not pair by epipolar line constrain
+          }
+        }
         // RCLCPP_INFO(this->get_logger(), "Paired!");
         cv::Mat pnts4D, pnts;
-        cv::triangulatePoints(_p[0], _p[1], up0, up1, pnts4D);
+        cv::triangulatePoints(_p0, _p1, up0, up1, pnts4D);
         cv::convertPointsFromHomogeneous(pnts4D.t(), pnts);
         auto msg = to_pc2(pnts);
+        // auto tmp = from_pc2(msg);
+
+        // std::cout << tmp << std::endl;
+        // std::cout << _c0 << std::endl;
+        // std::cout << _d0 << std::endl;
+        // std::cout << _r0 << std::endl;
+        // std::cout << _p0 << std::endl;
         msg->header.stamp = this->now();
         msg->header.frame_id = "stylus";
         _pub->publish(std::move(msg));

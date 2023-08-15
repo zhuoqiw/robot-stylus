@@ -165,7 +165,11 @@ private:
    */
   std::vector<std::thread> _threads;
 
-  cv::Mat _c[2], _d[2], _r[2], _p[2];
+  /**
+   * @brief Intrinsic and extrinsic parameters.
+   *
+   */
+  cv::Mat _c0, _c1, _d0, _d1, _r0, _r1, _p0, _p1;
 };
 
 }  // namespace reconstruct_pose
