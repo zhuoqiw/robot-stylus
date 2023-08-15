@@ -29,7 +29,7 @@ import launch
 from ament_index_python.packages import get_package_share_directory
 from launch_ros.descriptions import ComposableNode
 from launch_ros.actions import ComposableNodeContainer
-# from launch_ros.actions import Node
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
@@ -95,4 +95,19 @@ def generate_launch_description():
             reconstruct_pose_node],
         output='screen')
 
-    return launch.LaunchDescription([container])
+    stylus = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments=[
+            '--x', '0',
+            '--y', '0',
+            '--z', '1',
+            '--qx', '0',
+            '--qy', '0',
+            '--qz', '0',
+            '--qw', '0',
+            '--frame-id', 'world',
+            '--child-frame-id', 'stylus']
+    )
+
+    return launch.LaunchDescription([container, stylus])
