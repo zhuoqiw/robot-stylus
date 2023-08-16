@@ -102,11 +102,11 @@ def generate_launch_description():
             '--x', '0',
             '--y', '0',
             '--z', '1',
-            '--qx', '0',
+            '--qx', '-0.70682518',
             '--qy', '0',
             '--qz', '0',
-            '--qw', '1',
-            '--frame-id', 'world',
+            '--qw', '0.70738827',
+            '--frame-id', 'map',
             '--child-frame-id', 'stylus']
     )
 
