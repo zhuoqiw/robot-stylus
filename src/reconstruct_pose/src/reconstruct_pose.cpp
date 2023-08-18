@@ -253,20 +253,13 @@ void ReconstructPose::_worker()
         cv::undistortPoints(p0, up0, _c0, _d0, _r0, _p0);
         cv::undistortPoints(p1, up1, _c1, _d1, _r1, _p1);
 
-        bool jump = false;
         auto dif = cv::Mat_<double>(up0.reshape(1).col(1) - up1.reshape(1).col(1));
-        for (auto iter = dif.begin(); iter != dif.end(); ++iter) {
-          if (abs(*iter) > 3.) {
-            jump = true;
-            break;   // Not pair by epipolar line constrain
-          }
-        }
 
-        if (jump) {
+        if (cv::norm(dif) > 10.) {
           RCLCPP_INFO(this->get_logger(), "Not pair by epipolar line constrain");
           continue;
         }
-        // RCLCPP_INFO(this->get_logger(), "Paired!");
+
         cv::Mat pnts4D, pnts;
         cv::triangulatePoints(_p0, _p1, up0, up1, pnts4D);
         cv::convertPointsFromHomogeneous(pnts4D.t(), pnts);
