@@ -19,12 +19,13 @@ jobs:
         name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_HUB_USER_NAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
         name: Build and push
         uses: docker/build-push-action@v6
         with:
+          build-args: DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USER_NAME }}/robot-stylus:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/robot-stylus:latest
