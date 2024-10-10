@@ -7,6 +7,9 @@ FROM $DOCKER_HUB_USER_NAME/ros-opencv:4.8.0 AS opencv
 # Use Pylon
 FROM $DOCKER_HUB_USER_NAME/ros-pylon:7.3.0 AS pylon
 
+# Use mindvision
+FROM $DOCKER_HUB_USER_NAME/ros-mindvision:2.1.0.37 AS mindvision
+
 # Base image
 FROM ros:humble
 
@@ -33,6 +36,9 @@ COPY --from=opencv /setup /
 
 # Copy from Pylon
 COPY --from=pylon /setup /
+
+# Copy from mindvision
+COPY --from=mindvision /setup/opt /opt/
 
 # Setup environment
 ENV PYLON_ROOT=/opt/pylon
