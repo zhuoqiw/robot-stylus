@@ -47,7 +47,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && rm -rf /var/lib/apt/lists/*
 
 # Setup ldconfig
-RUN ldconfig
+# RUN ldconfig
 
 # Login as ros
 USER ros
