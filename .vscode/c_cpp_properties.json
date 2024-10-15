@@ -6,7 +6,8 @@
                 "${workspaceFolder}/**",
                 "/opt/ros/**",
                 "/opt/opencv/include/opencv4",
-                "/opt/pylon/include"
+                "/opt/pylon/include",
+                "/opt/mindvision/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

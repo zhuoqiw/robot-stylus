@@ -38,7 +38,7 @@ COPY --from=opencv /setup /
 COPY --from=pylon /setup /
 
 # Copy from mindvision
-COPY --from=mindvision /setup/opt /opt/
+COPY --from=mindvision setup /
 
 # Setup environment
 ENV PYLON_ROOT=/opt/pylon
