@@ -1,14 +1,11 @@
-# Docker hub user name
-ARG DOCKERHUB_USERNAME
-
 # Use OpenCV
-FROM $DOCKERHUB_USERNAME/ros-opencv:4.8.0 AS opencv
+FROM zhuoqiw/ros-opencv:4.8.0 AS opencv
 
 # Use Pylon
-FROM $DOCKERHUB_USERNAME/ros-pylon:7.3.0 AS pylon
+FROM zhuoqiw/ros-pylon:7.3.0 AS pylon
 
 # Use mindvision
-FROM $DOCKERHUB_USERNAME/ros-mindvision:2.1.0.37 AS mindvision
+FROM zhuoqiw/ros-mindvision:2.1.0.37 AS mindvision
 
 # Base image
 FROM ros:humble
