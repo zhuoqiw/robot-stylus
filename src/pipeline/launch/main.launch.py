@@ -33,53 +33,20 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    camera_pylon_node_l = ComposableNode(
-        package='camera_pylon',
-        plugin='camera_pylon::CameraPylon',
-        name='camera_pylon_node_l',
-        parameters=[{'workers': 1, 'serial': '22404673'}],
+    camera_l = ComposableNode(
+        package='camera_mindvision',
+        plugin='camera_mindvision::CameraMindvision',
+        name='camera_l',
+        parameters=[{'name': 'camera1', 'config': 'camera1.config'}],
         remappings=[('~/grab', '/grab')],
         extra_arguments=[{'use_intra_process_comms': True}])
 
-    camera_pylon_node_r = ComposableNode(
-        package='camera_pylon',
-        plugin='camera_pylon::CameraPylon',
-        name='camera_pylon_node_r',
-        parameters=[{'workers': 1, 'serial': '22935134'}],
+    camera_r = ComposableNode(
+        package='camera_mindvision',
+        plugin='camera_mindvision::CameraMindvision',
+        name='camera_r',
+        parameters=[{'name': 'camera2', 'config': 'camera2.config'}],
         remappings=[('~/grab', '/grab')],
-        extra_arguments=[{'use_intra_process_comms': True}])
-
-    locate_stylus_node_l = ComposableNode(
-        package='locate_stylus',
-        plugin='locate_stylus::LocateStylus',
-        name='locate_stylus_node_l',
-        parameters=[{'workers': 1}],
-        remappings=[('~/image', '/camera_pylon_node_l/image')],
-        extra_arguments=[{'use_intra_process_comms': True}])
-
-    locate_stylus_node_r = ComposableNode(
-        package='locate_stylus',
-        plugin='locate_stylus::LocateStylus',
-        name='locate_stylus_node_r',
-        parameters=[{'workers': 1}],
-        remappings=[('~/image', '/camera_pylon_node_r/image')],
-        extra_arguments=[{'use_intra_process_comms': True}])
-
-    configFile = os.path.join(
-        get_package_share_directory('reconstruct_pose'),
-        'config',
-        'params.yaml'
-    )
-
-    with open(configFile, 'r') as file:
-        params = yaml.safe_load(file)['reconstruct_pose_node']['ros__parameters']
-
-    reconstruct_pose_node = ComposableNode(
-        package='reconstruct_pose',
-        plugin='reconstruct_pose::ReconstructPose',
-        parameters=[params],
-        remappings=[('~/points_l', '/locate_stylus_node_l/points'),
-                    ('~/points_r', '/locate_stylus_node_r/points')],
         extra_arguments=[{'use_intra_process_comms': True}])
 
     container = ComposableNodeContainer(
@@ -88,26 +55,8 @@ def generate_launch_description():
         package='rclcpp_components',
         executable='component_container_mt',
         composable_node_descriptions=[
-            camera_pylon_node_l,
-            camera_pylon_node_r,
-            locate_stylus_node_l,
-            locate_stylus_node_r,
-            reconstruct_pose_node],
+            camera_l,
+            camera_r],
         output='screen')
 
-    stylus = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        arguments=[
-            '--x', '0',
-            '--y', '0',
-            '--z', '1',
-            '--qx', '-0.70682518',
-            '--qy', '0',
-            '--qz', '0',
-            '--qw', '0.70738827',
-            '--frame-id', 'map',
-            '--child-frame-id', 'stylus']
-    )
-
-    return launch.LaunchDescription([container, stylus])
+    return launch.LaunchDescription([container])

@@ -1,0 +1,4 @@
+camera_mindvision_node:
+  ros__parameters:
+    name: 'camera1'
+    config: 'camera1.config'
